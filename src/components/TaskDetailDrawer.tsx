@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { X, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import type { Tarea, EstadoTarea, MiembroProyecto, Perfil } from '@/lib/types';
-import { ESTADO_CONFIG } from '@/lib/types';
+import type { Tarea, EstadoTarea, PrioridadTarea, MiembroProyecto, Perfil } from '@/lib/types';
+import { ESTADO_CONFIG, PRIORIDAD_CONFIG } from '@/lib/types';
 import { UserAvatar } from '@/components/UserAvatar';
 import { StatusDot } from '@/components/StatusDot';
 
@@ -24,6 +24,7 @@ export default function TaskDetailDrawer({ tarea, perfiles, miembros, onClose, o
   const [fechaInicio, setFechaInicio] = useState(tarea.fecha_inicio || '');
   const [fechaLimite, setFechaLimite] = useState(tarea.fecha_limite || '');
   const [seccion, setSeccion] = useState(tarea.seccion || 'General');
+  const [prioridad, setPrioridad] = useState<PrioridadTarea>(tarea.prioridad || 'media');
   const [saving, setSaving] = useState(false);
 
   const memberProfiles = miembros
@@ -36,7 +37,7 @@ export default function TaskDetailDrawer({ tarea, perfiles, miembros, onClose, o
     setSaving(true);
     const oldEstado = tarea.estado;
     await supabase.from('tareas').update({
-      titulo, descripcion: descripcion || null, estado,
+      titulo, descripcion: descripcion || null, estado, prioridad,
       responsable_id: responsableId || null,
       fecha_inicio: fechaInicio || null, fecha_limite: fechaLimite || null,
       seccion,
@@ -107,6 +108,24 @@ export default function TaskDetailDrawer({ tarea, perfiles, miembros, onClose, o
                 >
                   <StatusDot estado={e} />
                   {ESTADO_CONFIG[e].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Priority */}
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1.5">Prioridad</label>
+            <div className="flex gap-1.5">
+              {(Object.keys(PRIORIDAD_CONFIG) as PrioridadTarea[]).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPrioridad(p)}
+                  className={`px-2.5 py-1.5 rounded-md text-xs border transition-colors ${
+                    prioridad === p ? PRIORIDAD_CONFIG[p].className : 'text-muted-foreground hover:text-foreground border-transparent'
+                  }`}
+                >
+                  {PRIORIDAD_CONFIG[p].label}
                 </button>
               ))}
             </div>
