@@ -199,12 +199,13 @@ export default function ProjectDetailPage() {
       <div className="flex-1 overflow-hidden relative">
         {view === 'list' ? (
           <div className="h-full overflow-y-auto p-4">
-            {filteredTareas.length === 0 ? (
+            {activeTareas.length === 0 && completedTareas.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <p className="text-sm">Sin tareas</p>
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Active tasks by section */}
                 {Array.from(secciones.entries()).map(([seccion, tasks]) => (
                   <div key={seccion}>
                     <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">{seccion}</h3>
@@ -212,25 +213,82 @@ export default function ProjectDetailPage() {
                       {tasks.map(task => {
                         const responsable = getProfile(task.responsable_id);
                         return (
-                          <button
+                          <div
                             key={task.id}
-                            onClick={() => setSelectedTask(task)}
                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors text-left group"
                           >
-                            <StatusDot estado={task.estado} size="md" />
-                            {responsable && (
-                              <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} size="sm" />
-                            )}
-                            <span className="text-sm text-foreground flex-1 truncate">{task.titulo}</span>
-                            {task.fecha_limite && (
-                              <span className="text-[11px] text-muted-foreground">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
-                            )}
-                          </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); updateTaskStatus(task.id, 'completada'); }}
+                              className="w-5 h-5 rounded-full border border-muted-foreground/40 flex items-center justify-center shrink-0 hover:border-status-completed hover:bg-status-completed/20 transition-colors"
+                              title="Marcar completada"
+                            >
+                              <Check className="w-3 h-3 text-transparent group-hover:text-muted-foreground/40" />
+                            </button>
+                            <button
+                              onClick={() => setSelectedTask(task)}
+                              className="flex items-center gap-3 flex-1 min-w-0"
+                            >
+                              {responsable && (
+                                <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} size="sm" />
+                              )}
+                              <span className="text-sm text-foreground flex-1 truncate">{task.titulo}</span>
+                              {task.fecha_limite && (
+                                <span className="text-[11px] text-muted-foreground">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
+                              )}
+                            </button>
+                          </div>
                         );
                       })}
                     </div>
                   </div>
                 ))}
+
+                {/* Completed tasks collapsible */}
+                {completedTareas.length > 0 && (
+                  <div className="pt-2 border-t border-border/50">
+                    <button
+                      onClick={() => setShowCompleted(!showCompleted)}
+                      className="flex items-center gap-2 px-1 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full"
+                    >
+                      <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showCompleted ? 'rotate-90' : ''}`} />
+                      <span>Tareas completadas</span>
+                      <span className="text-[10px] text-muted-foreground/60">{completedTareas.length}</span>
+                    </button>
+                    {showCompleted && (
+                      <div className="space-y-0.5 mt-1">
+                        {completedTareas.map(task => {
+                          const responsable = getProfile(task.responsable_id);
+                          return (
+                            <div
+                              key={task.id}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors text-left group"
+                            >
+                              <button
+                                onClick={(e) => { e.stopPropagation(); updateTaskStatus(task.id, 'pendiente'); }}
+                                className="w-5 h-5 rounded-full border border-status-completed bg-status-completed/20 flex items-center justify-center shrink-0 hover:bg-transparent hover:border-muted-foreground/40 transition-colors"
+                                title="Desmarcar completada"
+                              >
+                                <Check className="w-3 h-3 text-status-completed" />
+                              </button>
+                              <button
+                                onClick={() => setSelectedTask(task)}
+                                className="flex items-center gap-3 flex-1 min-w-0"
+                              >
+                                {responsable && (
+                                  <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} size="sm" />
+                                )}
+                                <span className="text-sm text-muted-foreground flex-1 truncate line-through">{task.titulo}</span>
+                                {task.fecha_limite && (
+                                  <span className="text-[11px] text-muted-foreground/60">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
+                                )}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
