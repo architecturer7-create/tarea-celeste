@@ -272,7 +272,7 @@ export default function ProjectDetailPage() {
                               </button>
                               <button
                                 onClick={() => setSelectedTask(task)}
-                                className="flex items-center gap-3 flex-1 min-w-0"
+                                className="flex items-center gap-3 flex-1 min-w-0 text-left"
                               >
                                 {responsable && (
                                   <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} size="sm" />
