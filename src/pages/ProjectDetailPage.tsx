@@ -91,11 +91,14 @@ export default function ProjectDetailPage() {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !inviteEmail.trim()) return;
-    const { data: targetProfile } = await supabase.from('perfiles').select('user_id').eq('email', inviteEmail.trim()).single();
-    if (targetProfile) {
+    const { data: userId, error } = await supabase.rpc('buscar_usuario_por_email', {
+      _email: inviteEmail.trim(),
+      _proyecto_id: id,
+    });
+    if (userId && !error) {
       await supabase.from('miembros_proyecto').insert({
         proyecto_id: id,
-        usuario_id: (targetProfile as unknown as { user_id: string }).user_id,
+        usuario_id: userId as string,
         rol: 'miembro' as const,
       });
       setInviteEmail('');
