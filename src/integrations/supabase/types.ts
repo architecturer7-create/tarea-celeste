@@ -145,6 +145,7 @@ export type Database = {
           fecha_inicio: string | null
           fecha_limite: string | null
           id: string
+          prioridad: Database["public"]["Enums"]["prioridad_tarea"]
           proyecto_id: string
           responsable_id: string | null
           seccion: string | null
@@ -159,6 +160,7 @@ export type Database = {
           fecha_inicio?: string | null
           fecha_limite?: string | null
           id?: string
+          prioridad?: Database["public"]["Enums"]["prioridad_tarea"]
           proyecto_id: string
           responsable_id?: string | null
           seccion?: string | null
@@ -173,6 +175,7 @@ export type Database = {
           fecha_inicio?: string | null
           fecha_limite?: string | null
           id?: string
+          prioridad?: Database["public"]["Enums"]["prioridad_tarea"]
           proyecto_id?: string
           responsable_id?: string | null
           seccion?: string | null
@@ -213,6 +216,7 @@ export type Database = {
     }
     Enums: {
       estado_tarea: "pendiente" | "en_progreso" | "bloqueada" | "completada"
+      prioridad_tarea: "baja" | "media" | "alta"
       rol_miembro: "propietario" | "miembro"
     }
     CompositeTypes: {
@@ -342,6 +346,7 @@ export const Constants = {
   public: {
     Enums: {
       estado_tarea: ["pendiente", "en_progreso", "bloqueada", "completada"],
+      prioridad_tarea: ["baja", "media", "alta"],
       rol_miembro: ["propietario", "miembro"],
     },
   },

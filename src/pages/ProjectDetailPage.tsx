@@ -4,7 +4,7 @@ import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight } from
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Proyecto, Tarea, MiembroProyecto, Perfil, EstadoTarea } from '@/lib/types';
-import { ESTADO_CONFIG } from '@/lib/types';
+import { ESTADO_CONFIG, PRIORIDAD_CONFIG } from '@/lib/types';
 import { UserAvatar } from '@/components/UserAvatar';
 import { StatusDot } from '@/components/StatusDot';
 import TaskDetailDrawer from '@/components/TaskDetailDrawer';
@@ -232,6 +232,9 @@ export default function ProjectDetailPage() {
                                 <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} size="sm" />
                               )}
                               <span className="text-sm text-foreground flex-1 truncate">{task.titulo}</span>
+                              <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium border ${PRIORIDAD_CONFIG[task.prioridad].className}`}>
+                                {PRIORIDAD_CONFIG[task.prioridad].label}
+                              </span>
                               {task.fecha_limite && (
                                 <span className="text-[11px] text-muted-foreground">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
                               )}
@@ -278,6 +281,9 @@ export default function ProjectDetailPage() {
                                   <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} size="sm" />
                                 )}
                                 <span className="text-sm text-muted-foreground flex-1 truncate line-through">{task.titulo}</span>
+                                <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium border ${PRIORIDAD_CONFIG[task.prioridad].className}`}>
+                                  {PRIORIDAD_CONFIG[task.prioridad].label}
+                                </span>
                                 {task.fecha_limite && (
                                   <span className="text-[11px] text-muted-foreground/60">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
                                 )}

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import type { MiembroProyecto, Perfil, EstadoTarea } from '@/lib/types';
-import { ESTADO_CONFIG } from '@/lib/types';
+import type { MiembroProyecto, Perfil, EstadoTarea, PrioridadTarea } from '@/lib/types';
+import { ESTADO_CONFIG, PRIORIDAD_CONFIG } from '@/lib/types';
 import { StatusDot } from '@/components/StatusDot';
 
 interface Props {
@@ -22,6 +22,7 @@ export default function CreateTaskModal({ proyectoId, miembros, perfiles, onClos
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaLimite, setFechaLimite] = useState('');
   const [seccion, setSeccion] = useState('General');
+  const [prioridad, setPrioridad] = useState<PrioridadTarea>('media');
   const [saving, setSaving] = useState(false);
 
   const memberProfiles = miembros
@@ -38,6 +39,7 @@ export default function CreateTaskModal({ proyectoId, miembros, perfiles, onClos
       titulo: titulo.trim(),
       descripcion: descripcion || null,
       estado,
+      prioridad,
       responsable_id: responsableId || null,
       fecha_inicio: fechaInicio || null,
       fecha_limite: fechaLimite || null,
@@ -89,6 +91,23 @@ export default function CreateTaskModal({ proyectoId, miembros, perfiles, onClos
                 >
                   <StatusDot estado={e} />
                   {ESTADO_CONFIG[e].label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1.5">Prioridad</label>
+            <div className="flex gap-1.5">
+              {(Object.keys(PRIORIDAD_CONFIG) as PrioridadTarea[]).map(p => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPrioridad(p)}
+                  className={`px-2.5 py-1.5 rounded-md text-xs border transition-colors ${
+                    prioridad === p ? PRIORIDAD_CONFIG[p].className : 'text-muted-foreground hover:text-foreground border-transparent'
+                  }`}
+                >
+                  {PRIORIDAD_CONFIG[p].label}
                 </button>
               ))}
             </div>

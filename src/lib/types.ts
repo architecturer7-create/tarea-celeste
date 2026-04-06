@@ -1,5 +1,6 @@
 export type EstadoTarea = 'pendiente' | 'en_progreso' | 'bloqueada' | 'completada';
 export type RolMiembro = 'propietario' | 'miembro';
+export type PrioridadTarea = 'baja' | 'media' | 'alta';
 
 export interface Perfil {
   id: string;
@@ -32,6 +33,7 @@ export interface Tarea {
   titulo: string;
   descripcion: string | null;
   estado: EstadoTarea;
+  prioridad: PrioridadTarea;
   responsable_id: string | null;
   fecha_inicio: string | null;
   fecha_limite: string | null;
@@ -56,6 +58,12 @@ export const ESTADO_CONFIG: Record<EstadoTarea, { label: string; color: string; 
   en_progreso: { label: 'En progreso', color: 'hsl(40, 90%, 47%)', dotClass: 'bg-status-progress' },
   bloqueada: { label: 'Bloqueada', color: 'hsl(345, 75%, 62%)', dotClass: 'bg-status-blocked' },
   completada: { label: 'Completada', color: 'hsl(162, 71%, 42%)', dotClass: 'bg-status-completed' },
+};
+
+export const PRIORIDAD_CONFIG: Record<PrioridadTarea, { label: string; className: string }> = {
+  alta: { label: 'Alta', className: 'bg-destructive/15 text-destructive border-destructive/20' },
+  media: { label: 'Media', className: 'bg-accent/50 text-accent-foreground border-accent/30' },
+  baja: { label: 'Baja', className: 'bg-muted text-muted-foreground border-border' },
 };
 
 export const PROJECT_COLORS = [
