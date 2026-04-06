@@ -63,15 +63,20 @@ export default function ProjectDetailPage() {
     return result;
   }, [tareas, filterEstado, filterResponsable]);
 
+  const activeTareas = useMemo(() => filteredTareas.filter(t => t.estado !== 'completada'), [filteredTareas]);
+  const completedTareas = useMemo(() => filteredTareas.filter(t => t.estado === 'completada'), [filteredTareas]);
+
   const secciones = useMemo(() => {
     const map = new Map<string, Tarea[]>();
-    filteredTareas.forEach(t => {
+    activeTareas.forEach(t => {
       const sec = t.seccion || 'General';
       if (!map.has(sec)) map.set(sec, []);
       map.get(sec)!.push(t);
     });
     return map;
-  }, [filteredTareas]);
+  }, [activeTareas]);
+
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const counts = useMemo(() => ({
     total: tareas.length,
