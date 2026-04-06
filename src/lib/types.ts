@@ -1,5 +1,6 @@
 export type EstadoTarea = 'pendiente' | 'en_progreso' | 'bloqueada' | 'completada';
 export type RolMiembro = 'propietario' | 'miembro';
+export type PrioridadTarea = 'baja' | 'media' | 'alta';
 
 export interface Perfil {
   id: string;
