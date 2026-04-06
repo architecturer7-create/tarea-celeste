@@ -40,18 +40,12 @@ export default function ProjectsPage() {
     e.preventDefault();
     if (!user || !newName.trim()) return;
 
-    const { data: proyecto } = await supabase
-      .from('proyectos')
-      .insert({ nombre: newName.trim(), color: newColor, creado_por: user.id })
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc('crear_proyecto', {
+      _nombre: newName.trim(),
+      _color: newColor,
+    });
 
-    if (proyecto) {
-      await supabase.from('miembros_proyecto').insert({
-        proyecto_id: (proyecto as unknown as Proyecto).id,
-        usuario_id: user.id,
-        rol: 'propietario' as const,
-      });
+    if (!error && data) {
       setNewName('');
       setShowCreate(false);
       fetchData();

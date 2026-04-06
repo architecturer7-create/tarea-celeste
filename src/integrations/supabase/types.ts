@@ -193,6 +193,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      crear_proyecto: {
+        Args: { _color: string; _nombre: string }
+        Returns: string
+      }
       is_project_member: {
         Args: { _proyecto_id: string; _user_id: string }
         Returns: boolean
