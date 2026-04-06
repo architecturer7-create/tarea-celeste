@@ -193,6 +193,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      buscar_usuario_por_email: {
+        Args: { _email: string; _proyecto_id: string }
+        Returns: string
+      }
       crear_proyecto: {
         Args: { _color: string; _nombre: string }
         Returns: string
