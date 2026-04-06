@@ -65,6 +65,8 @@ export const PRIORIDAD_CONFIG: Record<PrioridadTarea, { label: string; className
   media: { label: 'Media', className: 'bg-accent/50 text-accent-foreground border-accent/30' },
   baja: { label: 'Baja', className: 'bg-muted text-muted-foreground border-border' },
 };
+
+export const PROJECT_COLORS = [
   '#E8547A', '#1DB88E', '#F0A500', '#6366F1',
   '#EC4899', '#14B8A6', '#F97316', '#8B5CF6',
 ];
