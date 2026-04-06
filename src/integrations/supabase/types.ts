@@ -14,16 +14,190 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      actividad_tareas: {
+        Row: {
+          accion: string
+          fecha: string
+          id: string
+          tarea_id: string
+          usuario_id: string
+          valor_anterior: string | null
+          valor_nuevo: string | null
+        }
+        Insert: {
+          accion: string
+          fecha?: string
+          id?: string
+          tarea_id: string
+          usuario_id: string
+          valor_anterior?: string | null
+          valor_nuevo?: string | null
+        }
+        Update: {
+          accion?: string
+          fecha?: string
+          id?: string
+          tarea_id?: string
+          usuario_id?: string
+          valor_anterior?: string | null
+          valor_nuevo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actividad_tareas_tarea_id_fkey"
+            columns: ["tarea_id"]
+            isOneToOne: false
+            referencedRelation: "tareas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      miembros_proyecto: {
+        Row: {
+          created_at: string
+          id: string
+          proyecto_id: string
+          rol: Database["public"]["Enums"]["rol_miembro"]
+          usuario_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          proyecto_id: string
+          rol?: Database["public"]["Enums"]["rol_miembro"]
+          usuario_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          proyecto_id?: string
+          rol?: Database["public"]["Enums"]["rol_miembro"]
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "miembros_proyecto_proyecto_id_fkey"
+            columns: ["proyecto_id"]
+            isOneToOne: false
+            referencedRelation: "proyectos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      perfiles: {
+        Row: {
+          color_avatar: string
+          created_at: string
+          email: string
+          id: string
+          nombre: string
+          user_id: string
+        }
+        Insert: {
+          color_avatar?: string
+          created_at?: string
+          email?: string
+          id?: string
+          nombre?: string
+          user_id: string
+        }
+        Update: {
+          color_avatar?: string
+          created_at?: string
+          email?: string
+          id?: string
+          nombre?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      proyectos: {
+        Row: {
+          color: string
+          creado_por: string
+          fecha_creacion: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          color?: string
+          creado_por: string
+          fecha_creacion?: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          color?: string
+          creado_por?: string
+          fecha_creacion?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
+      tareas: {
+        Row: {
+          creado_por: string
+          descripcion: string | null
+          estado: Database["public"]["Enums"]["estado_tarea"]
+          fecha_actualizacion: string
+          fecha_creacion: string
+          fecha_inicio: string | null
+          fecha_limite: string | null
+          id: string
+          proyecto_id: string
+          responsable_id: string | null
+          seccion: string | null
+          titulo: string
+        }
+        Insert: {
+          creado_por: string
+          descripcion?: string | null
+          estado?: Database["public"]["Enums"]["estado_tarea"]
+          fecha_actualizacion?: string
+          fecha_creacion?: string
+          fecha_inicio?: string | null
+          fecha_limite?: string | null
+          id?: string
+          proyecto_id: string
+          responsable_id?: string | null
+          seccion?: string | null
+          titulo: string
+        }
+        Update: {
+          creado_por?: string
+          descripcion?: string | null
+          estado?: Database["public"]["Enums"]["estado_tarea"]
+          fecha_actualizacion?: string
+          fecha_creacion?: string
+          fecha_inicio?: string | null
+          fecha_limite?: string | null
+          id?: string
+          proyecto_id?: string
+          responsable_id?: string | null
+          seccion?: string | null
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tareas_proyecto_id_fkey"
+            columns: ["proyecto_id"]
+            isOneToOne: false
+            referencedRelation: "proyectos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      random_avatar_color: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      estado_tarea: "pendiente" | "en_progreso" | "bloqueada" | "completada"
+      rol_miembro: "propietario" | "miembro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +324,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      estado_tarea: ["pendiente", "en_progreso", "bloqueada", "completada"],
+      rol_miembro: ["propietario", "miembro"],
+    },
   },
 } as const
