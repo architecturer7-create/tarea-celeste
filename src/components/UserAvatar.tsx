@@ -1,6 +1,7 @@
 interface UserAvatarProps {
   nombre: string;
   color: string;
+  avatarUrl?: string | null;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
@@ -11,8 +12,19 @@ const sizeClasses = {
   lg: 'w-10 h-10 text-sm',
 };
 
-export function UserAvatar({ nombre, color, size = 'md', className = '' }: UserAvatarProps) {
+export function UserAvatar({ nombre, color, avatarUrl, size = 'md', className = '' }: UserAvatarProps) {
   const initial = nombre?.charAt(0)?.toUpperCase() || '?';
+
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={nombre}
+        title={nombre}
+        className={`rounded-full object-cover shrink-0 ${sizeClasses[size]} ${className}`}
+      />
+    );
+  }
 
   return (
     <div

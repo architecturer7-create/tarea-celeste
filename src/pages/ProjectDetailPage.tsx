@@ -144,6 +144,7 @@ export default function ProjectDetailPage() {
                   key={p.user_id}
                   nombre={p.nombre}
                   color={p.color_avatar}
+                  avatarUrl={p.avatar_url}
                   size="sm"
                   className={`cursor-pointer transition-all ${filterResponsable === p.user_id ? 'ring-2 ring-primary' : ''}`}
                 />
@@ -229,7 +230,7 @@ export default function ProjectDetailPage() {
                               className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 text-left"
                             >
                               {responsable && (
-                                <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} size="sm" />
+                                <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} avatarUrl={responsable.avatar_url} size="sm" />
                               )}
                               <span className="text-xs md:text-sm text-foreground flex-1 truncate">{task.titulo}</span>
                               <span className={`shrink-0 px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-medium border ${PRIORIDAD_CONFIG[task.prioridad].className}`}>
@@ -278,7 +279,7 @@ export default function ProjectDetailPage() {
                                 className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 text-left"
                               >
                                 {responsable && (
-                                  <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} size="sm" />
+                                  <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} avatarUrl={responsable.avatar_url} size="sm" />
                                 )}
                                 <span className="text-xs md:text-sm text-muted-foreground flex-1 truncate line-through">{task.titulo}</span>
                                 <span className={`shrink-0 px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-medium border ${PRIORIDAD_CONFIG[task.prioridad].className}`}>
