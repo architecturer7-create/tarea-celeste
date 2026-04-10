@@ -128,14 +128,14 @@ export default function ProjectDetailPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Project header */}
-      <div className="border-b border-border px-4 py-3 space-y-3">
+      <div className="border-b border-border px-3 md:px-4 py-2 md:py-3 space-y-2 md:space-y-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button onClick={() => navigate('/')} className="text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </button>
-            <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: proyecto.color }} />
-            <span className="text-sm font-medium text-foreground">{proyecto.nombre}</span>
+            <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-sm" style={{ backgroundColor: proyecto.color }} />
+            <span className="text-xs md:text-sm font-medium text-foreground">{proyecto.nombre}</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex -space-x-1.5 mr-2">
@@ -170,8 +170,8 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Counters and filters */}
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+        <div className="flex items-center justify-between flex-wrap gap-1.5 md:gap-2">
+          <div className="flex items-center gap-2 md:gap-3 text-[10px] md:text-[11px] text-muted-foreground">
             <span>{counts.total} Total</span>
             <span className="text-status-completed">{counts.completada} Completadas</span>
             <span className="text-status-progress">{counts.en_progreso} En progreso</span>
@@ -198,7 +198,7 @@ export default function ProjectDetailPage() {
       {/* Content */}
       <div className="flex-1 overflow-hidden relative">
         {view === 'list' ? (
-          <div className="h-full overflow-y-auto p-4">
+          <div className="h-full overflow-y-auto p-3 md:p-4">
             {activeTareas.length === 0 && completedTareas.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                 <p className="text-sm">Sin tareas</p>
@@ -208,35 +208,35 @@ export default function ProjectDetailPage() {
                 {/* Active tasks by section */}
                 {Array.from(secciones.entries()).map(([seccion, tasks]) => (
                   <div key={seccion}>
-                    <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">{seccion}</h3>
+                    <h3 className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 md:mb-2 px-1">{seccion}</h3>
                     <div className="space-y-0.5">
                       {tasks.map(task => {
                         const responsable = getProfile(task.responsable_id);
                         return (
                           <div
                             key={task.id}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors text-left group"
+                            className="w-full flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 md:py-2.5 rounded-md hover:bg-muted/50 transition-colors text-left group"
                           >
                             <button
                               onClick={(e) => { e.stopPropagation(); updateTaskStatus(task.id, 'completada'); }}
-                              className="w-5 h-5 rounded-full border border-muted-foreground/40 flex items-center justify-center shrink-0 hover:border-status-completed hover:bg-status-completed/20 transition-colors"
+                              className="w-4 h-4 md:w-5 md:h-5 rounded-full border border-muted-foreground/40 flex items-center justify-center shrink-0 hover:border-status-completed hover:bg-status-completed/20 transition-colors"
                               title="Marcar completada"
                             >
-                              <Check className="w-3 h-3 text-transparent group-hover:text-muted-foreground/40" />
+                              <Check className="w-2.5 h-2.5 md:w-3 md:h-3 text-transparent group-hover:text-muted-foreground/40" />
                             </button>
                             <button
                               onClick={() => setSelectedTask(task)}
-                              className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                              className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 text-left"
                             >
                               {responsable && (
                                 <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} size="sm" />
                               )}
-                              <span className="text-sm text-foreground flex-1 truncate">{task.titulo}</span>
-                              <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium border ${PRIORIDAD_CONFIG[task.prioridad].className}`}>
+                              <span className="text-xs md:text-sm text-foreground flex-1 truncate">{task.titulo}</span>
+                              <span className={`shrink-0 px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-medium border ${PRIORIDAD_CONFIG[task.prioridad].className}`}>
                                 {PRIORIDAD_CONFIG[task.prioridad].label}
                               </span>
                               {task.fecha_limite && (
-                                <span className="text-[11px] text-muted-foreground">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
+                                <span className="text-[10px] md:text-[11px] text-muted-foreground">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
                               )}
                             </button>
                           </div>
@@ -262,30 +262,30 @@ export default function ProjectDetailPage() {
                         {completedTareas.map(task => {
                           const responsable = getProfile(task.responsable_id);
                           return (
-                            <div
+                          <div
                               key={task.id}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors text-left group"
+                              className="w-full flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 md:py-2.5 rounded-md hover:bg-muted/50 transition-colors text-left group"
                             >
                               <button
                                 onClick={(e) => { e.stopPropagation(); updateTaskStatus(task.id, 'pendiente'); }}
-                                className="w-5 h-5 rounded-full border border-status-completed bg-status-completed/20 flex items-center justify-center shrink-0 hover:bg-transparent hover:border-muted-foreground/40 transition-colors"
+                                className="w-4 h-4 md:w-5 md:h-5 rounded-full border border-status-completed bg-status-completed/20 flex items-center justify-center shrink-0 hover:bg-transparent hover:border-muted-foreground/40 transition-colors"
                                 title="Desmarcar completada"
                               >
-                                <Check className="w-3 h-3 text-status-completed" />
+                                <Check className="w-2.5 h-2.5 md:w-3 md:h-3 text-status-completed" />
                               </button>
                               <button
                                 onClick={() => setSelectedTask(task)}
-                                className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                                className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 text-left"
                               >
                                 {responsable && (
                                   <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} size="sm" />
                                 )}
-                                <span className="text-sm text-muted-foreground flex-1 truncate line-through">{task.titulo}</span>
-                                <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium border ${PRIORIDAD_CONFIG[task.prioridad].className}`}>
+                                <span className="text-xs md:text-sm text-muted-foreground flex-1 truncate line-through">{task.titulo}</span>
+                                <span className={`shrink-0 px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-medium border ${PRIORIDAD_CONFIG[task.prioridad].className}`}>
                                   {PRIORIDAD_CONFIG[task.prioridad].label}
                                 </span>
                                 {task.fecha_limite && (
-                                  <span className="text-[11px] text-muted-foreground/60">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
+                                  <span className="text-[10px] md:text-[11px] text-muted-foreground/60">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
                                 )}
                               </button>
                             </div>
@@ -310,7 +310,7 @@ export default function ProjectDetailPage() {
         {/* FAB */}
         <button
           onClick={() => setShowCreateTask(true)}
-          className="fixed bottom-20 right-4 md:absolute md:bottom-4 md:right-4 w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg glow-primary hover:opacity-90 transition-opacity z-20"
+          className="fixed bottom-16 right-3 md:absolute md:bottom-4 md:right-4 w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg glow-primary hover:opacity-90 transition-opacity z-20"
         >
           <Plus className="w-5 h-5" />
         </button>
