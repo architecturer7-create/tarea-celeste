@@ -227,6 +227,29 @@ export default function ProjectsPage() {
           </div>
         </div>
       )}
+
+      {/* Rename modal */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="glass-panel rounded-lg p-6 w-full max-w-sm animate-fade-in">
+            <h3 className="text-base font-medium text-foreground mb-4">Renombrar proyecto</h3>
+            <form onSubmit={renameProject} className="space-y-4">
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                required
+                autoFocus
+                className="w-full h-10 px-3 rounded-md bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => setEditTarget(null)} className="h-9 px-4 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
+                <button type="submit" className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
