@@ -19,6 +19,8 @@ export default function ProjectsPage() {
   const [newColor, setNewColor] = useState(PROJECT_COLORS[0]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
 
   const fetchData = async () => {
     if (!user) return;
