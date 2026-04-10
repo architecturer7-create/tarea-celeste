@@ -178,6 +178,13 @@ export default function ProjectsPage() {
                   <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-sm" style={{ backgroundColor: p.color }} />
                   <span className="text-xs md:text-sm font-medium text-foreground truncate flex-1">{p.nombre}</span>
                   <button
+                    onClick={(e) => { e.stopPropagation(); setEditName(p.nombre); setEditTarget(p.id); }}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all p-1"
+                    title="Editar nombre"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
                     onClick={(e) => { e.stopPropagation(); setDeleteTarget(p.id); }}
                     className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 -mr-1"
                     title="Eliminar proyecto"
