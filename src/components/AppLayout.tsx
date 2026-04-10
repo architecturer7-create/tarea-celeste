@@ -24,12 +24,12 @@ export default function AppLayout({ children }: Props) {
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Top header */}
-      <header className="h-12 border-b border-border flex items-center justify-between px-4 shrink-0 safe-top">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-primary flex items-center justify-center">
-            <Zap className="w-3.5 h-3.5 text-primary-foreground" />
+      <header className="h-10 md:h-12 border-b border-border flex items-center justify-between px-3 md:px-4 shrink-0 safe-top">
+        <div className="flex items-center gap-1.5">
+          <div className="w-6 h-6 md:w-7 md:h-7 rounded-md bg-primary flex items-center justify-center">
+            <Zap className="w-3 h-3 md:w-3.5 md:h-3.5 text-primary-foreground" />
           </div>
-          <span className="text-sm font-semibold text-foreground tracking-tight">TaskFlow</span>
+          <span className="text-xs md:text-sm font-semibold text-foreground tracking-tight">TaskFlow</span>
         </div>
 
         {/* Desktop nav */}
@@ -63,19 +63,19 @@ export default function AppLayout({ children }: Props) {
       </main>
 
       {/* Mobile bottom tabs */}
-      <nav className="md:hidden border-t border-border flex items-center justify-around h-14 shrink-0 safe-bottom bg-background">
+      <nav className="md:hidden border-t border-border flex items-center justify-around h-12 shrink-0 safe-bottom bg-background">
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.path}
               onClick={() => navigate(tab.path)}
-              className={`flex flex-col items-center gap-0.5 py-1 px-4 transition-colors ${
+              className={`flex flex-col items-center gap-0.5 py-0.5 px-3 transition-colors ${
                 isActive(tab.path) ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="text-[10px]">{tab.label}</span>
+              <Icon className="w-4 h-4" />
+              <span className="text-[9px]">{tab.label}</span>
             </button>
           );
         })}

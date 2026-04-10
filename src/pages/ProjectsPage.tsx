@@ -79,14 +79,14 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-foreground">Proyectos</h1>
+    <div className="p-3 md:p-6 max-w-5xl mx-auto">
+      <div className="flex items-center justify-between mb-4 md:mb-6">
+        <h1 className="text-lg md:text-xl font-semibold text-foreground">Proyectos</h1>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-1.5 h-8 px-3 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+          className="flex items-center gap-1.5 h-7 md:h-8 px-2.5 md:px-3 rounded-md bg-primary text-primary-foreground text-xs md:text-sm font-medium hover:opacity-90 transition-opacity"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" />
           <span className="hidden sm:inline">Nuevo proyecto</span>
         </button>
       </div>
@@ -152,13 +152,13 @@ export default function ProjectsPage() {
               <button
                 key={p.id}
                 onClick={() => navigate(`/proyecto/${p.id}`)}
-                className="glass-panel rounded-lg p-4 text-left hover:border-border/80 transition-colors group"
+                className="glass-panel rounded-lg p-3 md:p-4 text-left hover:border-border/80 transition-colors group"
               >
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: p.color }} />
-                  <span className="text-sm font-medium text-foreground truncate">{p.nombre}</span>
+                <div className="flex items-center gap-2 mb-2 md:mb-3">
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-sm" style={{ backgroundColor: p.color }} />
+                  <span className="text-xs md:text-sm font-medium text-foreground truncate">{p.nombre}</span>
                 </div>
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground mb-3">
+                <div className="flex flex-wrap gap-x-2 md:gap-x-3 gap-y-1 text-[10px] md:text-[11px] text-muted-foreground mb-2 md:mb-3">
                   <span>{counts.total} total</span>
                   {counts.completada > 0 && <span className="text-status-completed">{counts.completada} completadas</span>}
                   {counts.en_progreso > 0 && <span className="text-status-progress">{counts.en_progreso} en progreso</span>}
