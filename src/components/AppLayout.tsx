@@ -49,7 +49,7 @@ export default function AppLayout({ children }: Props) {
 
         <div className="flex items-center gap-3">
           {perfil && (
-            <UserAvatar nombre={perfil.nombre} color={perfil.color_avatar} size="sm" />
+            <UserAvatar nombre={perfil.nombre} color={perfil.color_avatar} avatarUrl={perfil.avatar_url} size="sm" />
           )}
           <button onClick={signOut} className="hidden md:block text-xs text-muted-foreground hover:text-foreground transition-colors">
             Cerrar sesión

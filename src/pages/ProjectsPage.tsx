@@ -200,7 +200,7 @@ export default function ProjectsPage() {
                 </div>
                 <div className="flex -space-x-1.5">
                   {members.slice(0, 5).map(m => (
-                    <UserAvatar key={m.user_id} nombre={m.nombre} color={m.color_avatar} size="sm" />
+                    <UserAvatar key={m.user_id} nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" />
                   ))}
                   {members.length > 5 && (
                     <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground">
