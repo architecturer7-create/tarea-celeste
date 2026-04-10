@@ -64,6 +64,14 @@ export default function ProjectsPage() {
     fetchData();
   };
 
+  const renameProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget || !editName.trim()) return;
+    await supabase.from('proyectos').update({ nombre: editName.trim() }).eq('id', editTarget);
+    setEditTarget(null);
+    fetchData();
+  };
+
   const getTaskCounts = (proyectoId: string) => {
     const projectTasks = tareas.filter(t => t.proyecto_id === proyectoId);
     return {
