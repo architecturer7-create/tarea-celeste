@@ -86,6 +86,7 @@ export type Database = {
       }
       perfiles: {
         Row: {
+          avatar_url: string | null
           color_avatar: string
           created_at: string
           email: string
@@ -94,6 +95,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_url?: string | null
           color_avatar?: string
           created_at?: string
           email?: string
@@ -102,6 +104,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          avatar_url?: string | null
           color_avatar?: string
           created_at?: string
           email?: string
