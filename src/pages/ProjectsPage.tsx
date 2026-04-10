@@ -196,6 +196,20 @@ export default function ProjectsPage() {
           })}
         </div>
       )}
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="glass-panel rounded-lg p-6 w-full max-w-sm animate-fade-in">
+            <h3 className="text-base font-medium text-foreground mb-2">Eliminar proyecto</h3>
+            <p className="text-sm text-muted-foreground mb-4">¿Estás seguro? Se eliminarán todas las tareas y miembros del proyecto. Esta acción no se puede deshacer.</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setDeleteTarget(null)} className="h-9 px-4 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
+              <button onClick={deleteProject} className="h-9 px-4 rounded-md bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-opacity">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
