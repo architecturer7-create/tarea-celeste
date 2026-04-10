@@ -78,7 +78,7 @@
 
 @layer utilities {
   .glass-panel {
-    @apply bg-card border border-border/50 backdrop-blur-sm;
+    @apply bg-card backdrop-blur-sm;
   }
   .glow-primary {
     box-shadow: 0 0 20px hsl(345 75% 62% / 0.15);

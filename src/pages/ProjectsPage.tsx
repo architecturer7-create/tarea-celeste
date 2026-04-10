@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, FolderOpen } from 'lucide-react';
+import { Plus, FolderOpen, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Proyecto, Tarea, MiembroProyecto, Perfil } from '@/lib/types';
@@ -18,6 +18,7 @@ export default function ProjectsPage() {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(PROJECT_COLORS[0]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!user) return;
@@ -50,6 +51,15 @@ export default function ProjectsPage() {
       setShowCreate(false);
       fetchData();
     }
+  };
+
+  const deleteProject = async () => {
+    if (!deleteTarget) return;
+    await supabase.from('tareas').delete().eq('proyecto_id', deleteTarget);
+    await supabase.from('miembros_proyecto').delete().eq('proyecto_id', deleteTarget);
+    await supabase.from('proyectos').delete().eq('id', deleteTarget);
+    setDeleteTarget(null);
+    fetchData();
   };
 
   const getTaskCounts = (proyectoId: string) => {
@@ -152,11 +162,18 @@ export default function ProjectsPage() {
               <button
                 key={p.id}
                 onClick={() => navigate(`/proyecto/${p.id}`)}
-                className="glass-panel rounded-lg p-3 md:p-4 text-left hover:border-border/80 transition-colors group"
+                className="glass-panel rounded-lg p-3 md:p-4 text-left hover:border-border/80 transition-colors group border-0"
               >
                 <div className="flex items-center gap-2 mb-2 md:mb-3">
                   <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-sm" style={{ backgroundColor: p.color }} />
-                  <span className="text-xs md:text-sm font-medium text-foreground truncate">{p.nombre}</span>
+                  <span className="text-xs md:text-sm font-medium text-foreground truncate flex-1">{p.nombre}</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(p.id); }}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 -mr-1"
+                    title="Eliminar proyecto"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
                 <div className="flex flex-wrap gap-x-2 md:gap-x-3 gap-y-1 text-[10px] md:text-[11px] text-muted-foreground mb-2 md:mb-3">
                   <span>{counts.total} total</span>
@@ -177,6 +194,20 @@ export default function ProjectsPage() {
               </button>
             );
           })}
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="glass-panel rounded-lg p-6 w-full max-w-sm animate-fade-in">
+            <h3 className="text-base font-medium text-foreground mb-2">Eliminar proyecto</h3>
+            <p className="text-sm text-muted-foreground mb-4">¿Estás seguro? Se eliminarán todas las tareas y miembros del proyecto. Esta acción no se puede deshacer.</p>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setDeleteTarget(null)} className="h-9 px-4 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
+              <button onClick={deleteProject} className="h-9 px-4 rounded-md bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-opacity">Eliminar</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

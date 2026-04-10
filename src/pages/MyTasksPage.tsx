@@ -2,10 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Tarea, Proyecto, Perfil } from '@/lib/types';
+import { PRIORIDAD_CONFIG } from '@/lib/types';
 import { StatusDot } from '@/components/StatusDot';
-import { UserAvatar } from '@/components/UserAvatar';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, ChevronRight } from 'lucide-react';
 
 export default function MyTasksPage() {
   const { user } = useAuth();
@@ -14,6 +14,7 @@ export default function MyTasksPage() {
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -31,14 +32,20 @@ export default function MyTasksPage() {
     fetch();
   }, [user]);
 
-  const grouped = useMemo(() => {
+  const activeTareas = useMemo(() => tareas.filter(t => t.estado !== 'completada'), [tareas]);
+  const completedTareas = useMemo(() => tareas.filter(t => t.estado === 'completada'), [tareas]);
+
+  const groupTasks = (tasks: Tarea[]) => {
     const map = new Map<string, Tarea[]>();
-    tareas.forEach(t => {
+    tasks.forEach(t => {
       if (!map.has(t.proyecto_id)) map.set(t.proyecto_id, []);
       map.get(t.proyecto_id)!.push(t);
     });
     return map;
-  }, [tareas]);
+  };
+
+  const activeGrouped = useMemo(() => groupTasks(activeTareas), [activeTareas]);
+  const completedGrouped = useMemo(() => groupTasks(completedTareas), [completedTareas]);
 
   const getProject = (id: string) => proyectos.find(p => p.id === id);
 
@@ -46,9 +53,44 @@ export default function MyTasksPage() {
     return <div className="flex items-center justify-center h-full"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
   }
 
+  const renderTaskGroup = (proyectoId: string, tasks: Tarea[], completed = false) => {
+    const proyecto = getProject(proyectoId);
+    return (
+      <div key={proyectoId}>
+        <button
+          onClick={() => navigate(`/proyecto/${proyectoId}`)}
+          className="flex items-center gap-2 mb-1.5 hover:opacity-80 transition-opacity"
+        >
+          <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: proyecto?.color || '#666' }} />
+          <span className="text-[10px] md:text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            {proyecto?.nombre || 'Proyecto'}
+          </span>
+        </button>
+        <div className="space-y-0.5">
+          {tasks.map(task => (
+            <button
+              key={task.id}
+              onClick={() => navigate(`/proyecto/${task.proyecto_id}`)}
+              className="w-full flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 md:py-2.5 rounded-md hover:bg-muted/50 transition-colors text-left"
+            >
+              <StatusDot estado={task.estado} size="md" />
+              <span className={`text-xs md:text-sm flex-1 truncate ${completed ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{task.titulo}</span>
+              <span className={`shrink-0 px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-medium border ${PRIORIDAD_CONFIG[task.prioridad].className}`}>
+                {PRIORIDAD_CONFIG[task.prioridad].label}
+              </span>
+              {task.fecha_limite && (
+                <span className="text-[10px] md:text-[11px] text-muted-foreground">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="p-4 md:p-6 max-w-3xl mx-auto">
-      <h1 className="text-xl font-semibold text-foreground mb-6">Mis Tareas</h1>
+    <div className="p-3 md:p-6 max-w-3xl mx-auto">
+      <h1 className="text-lg md:text-xl font-semibold text-foreground mb-4 md:mb-6">Mis Tareas</h1>
 
       {tareas.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -56,38 +98,32 @@ export default function MyTasksPage() {
           <p className="text-sm">No tienes tareas asignadas</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {Array.from(grouped.entries()).map(([proyectoId, tasks]) => {
-            const proyecto = getProject(proyectoId);
-            return (
-              <div key={proyectoId}>
-                <button
-                  onClick={() => navigate(`/proyecto/${proyectoId}`)}
-                  className="flex items-center gap-2 mb-2 hover:opacity-80 transition-opacity"
-                >
-                  <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: proyecto?.color || '#666' }} />
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    {proyecto?.nombre || 'Proyecto'}
-                  </span>
-                </button>
-                <div className="space-y-0.5">
-                  {tasks.map(task => (
-                    <button
-                      key={task.id}
-                      onClick={() => navigate(`/proyecto/${task.proyecto_id}`)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/50 transition-colors text-left"
-                    >
-                      <StatusDot estado={task.estado} size="md" />
-                      <span className="text-sm text-foreground flex-1 truncate">{task.titulo}</span>
-                      {task.fecha_limite && (
-                        <span className="text-[11px] text-muted-foreground">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
-                      )}
-                    </button>
-                  ))}
+        <div className="space-y-4 md:space-y-6">
+          {/* Active tasks */}
+          {Array.from(activeGrouped.entries()).map(([proyectoId, tasks]) =>
+            renderTaskGroup(proyectoId, tasks)
+          )}
+
+          {/* Completed tasks collapsible */}
+          {completedTareas.length > 0 && (
+            <div className="pt-2 border-t border-border/50">
+              <button
+                onClick={() => setShowCompleted(!showCompleted)}
+                className="flex items-center gap-2 px-1 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full"
+              >
+                <ChevronRight className={`w-3.5 h-3.5 transition-transform ${showCompleted ? 'rotate-90' : ''}`} />
+                <span>Completadas</span>
+                <span className="text-[10px] text-muted-foreground/60">{completedTareas.length}</span>
+              </button>
+              {showCompleted && (
+                <div className="space-y-4 mt-1">
+                  {Array.from(completedGrouped.entries()).map(([proyectoId, tasks]) =>
+                    renderTaskGroup(proyectoId, tasks, true)
+                  )}
                 </div>
-              </div>
-            );
-          })}
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
