@@ -8,6 +8,7 @@ export interface Perfil {
   nombre: string;
   email: string;
   color_avatar: string;
+  avatar_url: string | null;
   created_at: string;
 }
 
