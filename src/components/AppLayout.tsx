@@ -58,7 +58,7 @@ export default function AppLayout({ children }: Props) {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-y-auto">
         {children}
       </main>
 
