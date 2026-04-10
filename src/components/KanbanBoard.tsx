@@ -71,7 +71,7 @@ export default function KanbanBoard({ tareas, perfiles, onTaskClick, onStatusCha
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         {responsable && (
-                          <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} size="sm" />
+                          <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} avatarUrl={responsable.avatar_url} size="sm" />
                         )}
                       </div>
                       {task.fecha_limite && (
