@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, FolderOpen, Trash2 } from 'lucide-react';
+import { Plus, FolderOpen, Trash2, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Proyecto, Tarea, MiembroProyecto, Perfil } from '@/lib/types';
@@ -19,6 +19,8 @@ export default function ProjectsPage() {
   const [newColor, setNewColor] = useState(PROJECT_COLORS[0]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
 
   const fetchData = async () => {
     if (!user) return;
@@ -59,6 +61,14 @@ export default function ProjectsPage() {
     await supabase.from('miembros_proyecto').delete().eq('proyecto_id', deleteTarget);
     await supabase.from('proyectos').delete().eq('id', deleteTarget);
     setDeleteTarget(null);
+    fetchData();
+  };
+
+  const renameProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTarget || !editName.trim()) return;
+    await supabase.from('proyectos').update({ nombre: editName.trim() }).eq('id', editTarget);
+    setEditTarget(null);
     fetchData();
   };
 
@@ -168,6 +178,13 @@ export default function ProjectsPage() {
                   <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-sm" style={{ backgroundColor: p.color }} />
                   <span className="text-xs md:text-sm font-medium text-foreground truncate flex-1">{p.nombre}</span>
                   <button
+                    onClick={(e) => { e.stopPropagation(); setEditName(p.nombre); setEditTarget(p.id); }}
+                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all p-1"
+                    title="Editar nombre"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
                     onClick={(e) => { e.stopPropagation(); setDeleteTarget(p.id); }}
                     className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 -mr-1"
                     title="Eliminar proyecto"
@@ -207,6 +224,29 @@ export default function ProjectsPage() {
               <button onClick={() => setDeleteTarget(null)} className="h-9 px-4 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
               <button onClick={deleteProject} className="h-9 px-4 rounded-md bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition-opacity">Eliminar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rename modal */}
+      {editTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="glass-panel rounded-lg p-6 w-full max-w-sm animate-fade-in">
+            <h3 className="text-base font-medium text-foreground mb-4">Renombrar proyecto</h3>
+            <form onSubmit={renameProject} className="space-y-4">
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                required
+                autoFocus
+                className="w-full h-10 px-3 rounded-md bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => setEditTarget(null)} className="h-9 px-4 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
+                <button type="submit" className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">Guardar</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
