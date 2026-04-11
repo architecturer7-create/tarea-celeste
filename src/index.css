@@ -92,6 +92,9 @@
   .safe-top {
     padding-top: env(safe-area-inset-top, 0px);
   }
+  .safe-bottom-fab {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
   .h-dvh {
     height: 100vh; /* fallback */
   }

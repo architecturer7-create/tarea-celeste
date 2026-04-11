@@ -311,7 +311,7 @@ export default function ProjectDetailPage() {
         {/* FAB */}
         <button
           onClick={() => setShowCreateTask(true)}
-          className="fixed bottom-20 right-3 md:absolute md:bottom-4 md:right-4 w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg glow-primary hover:opacity-90 transition-opacity z-20 safe-bottom-fab"
+          className="fixed bottom-24 right-3 md:absolute md:bottom-4 md:right-4 w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg glow-primary hover:opacity-90 transition-opacity z-20"
         >
           <Plus className="w-5 h-5" />
         </button>
