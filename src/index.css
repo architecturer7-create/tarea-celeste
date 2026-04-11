@@ -92,4 +92,13 @@
   .safe-top {
     padding-top: env(safe-area-inset-top, 0px);
   }
+  .h-dvh {
+    height: 100dvh;
+    height: 100vh; /* fallback */
+  }
+  @supports (height: 100dvh) {
+    .h-dvh {
+      height: 100dvh;
+    }
+  }
 }

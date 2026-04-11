@@ -23,7 +23,7 @@ export default function AppLayout({ children }: Props) {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-background">
+    <div className="h-dvh flex flex-col bg-background">
       {/* Top header */}
       <header className="h-10 md:h-12 border-b border-border flex items-center justify-between px-3 md:px-4 shrink-0 safe-top">
         <div className="flex items-center gap-1.5">
