@@ -1,66 +1,53 @@
 
-Objetivo: destrabar el acceso al repositorio para poder seguir con iOS/TestFlight.
 
-Lo que ya verifiqué
-- La URL `https://github.com/architecturer7-create/tarea-celeste` hoy responde 404.
-- En la lista pública de repos de `architecturer7-create` no aparece `tarea-celeste`.
-- Por eso el problema no está en `npm` ni en Capacitor: el bloqueo ocurre antes, en el clon.
+## Situación actual
 
-Do I know what the issue is?
-- Sí: GitHub no está exponiendo ese repo en esa URL para un acceso normal. Eso casi siempre significa una de estas 2 cosas:
-  1. el repo es privado y tu Mac no está autenticada con GitHub
-  2. el repo real existe, pero con otro owner o nombre distinto
+La app **ya abrió en Xcode y cargó en el simulador/dispositivo**. Los errores que ves en la consola de Xcode son normales durante desarrollo:
 
-Plan
-1. Confirmar desde el navegador, iniciando sesión en GitHub, si `tarea-celeste` abre normalmente.
-2. Si abre solo estando logueado, tratarlo como repo privado:
-   - autenticar Git en tu Mac, o
-   - usar la URL SSH, o
-   - clonar desde GitHub Desktop.
-3. Si ni logueado abre, copiar la URL exacta desde el botón verde `Code` del repo y usar esa, porque el owner/nombre no coincide.
-4. Recién cuando el `git clone` funcione, repetir instalación y sync de iOS dentro de la carpeta del proyecto.
+- **`RTIInputSystemClient`** — ruido interno de iOS con el teclado virtual. Ignorable.
+- **`UIScene lifecycle`** — advertencia de Apple para futuras versiones. No afecta ahora.
+- **`window.Capacitor.triggerEvent` undefined`** — esto pasa porque la app está cargando desde la URL remota de Lovable (live-reload), donde el bridge nativo de Capacitor no se inyecta completamente. Es esperado en modo desarrollo.
 
-Comandos según el caso
+## Qué sigue: subir a TestFlight
 
-Caso A: repo público o ya autenticado
-```bash
-git clone https://github.com/architecturer7-create/tarea-celeste.git
-cd tarea-celeste
-npm install
-npm run build
-npx cap add ios
-npx cap sync ios
-npx cap open ios
-```
+Ahora necesitas preparar el build de producción (sin live-reload) y subirlo a Apple.
 
-Caso B: repo privado
-```bash
-gh auth login
-git clone https://github.com/architecturer7-create/tarea-celeste.git
-cd tarea-celeste
-npm install
-npm run build
-npx cap add ios
-npx cap sync ios
-npx cap open ios
-```
+### Pasos
 
-Caso C: repo privado con SSH
-```bash
-git clone git@github.com:architecturer7-create/tarea-celeste.git
-cd tarea-celeste
-npm install
-npm run build
-npx cap add ios
-npx cap sync ios
-npx cap open ios
-```
+1. **Quitar la URL de live-reload** del `capacitor.config.ts` — comentar o eliminar el bloque `server.url` para que la app use los archivos locales del `dist/`.
 
-Detalle técnico
-- `cd: no such file or directory: tarea-celeste` pasa porque el clon falló y la carpeta nunca se creó.
-- `ENOENT /Users/aligarcia/package.json` solo significa que ejecutaste `npm` desde tu carpeta personal, no desde el proyecto.
-- Los errores de `npx cap ...` también son consecuencia del clon fallido.
+2. **Rebuild y sync** — en tu terminal, desde la carpeta `tarea-celeste`:
+   ```bash
+   npm run build
+   npx cap sync ios
+   ```
 
-Resultado esperado
-- Si el repo es privado y autenticas GitHub en tu Mac, o si usas la URL exacta correcta del botón `Code`, el clon dejará de fallar.
-- Después desaparecen automáticamente los errores de `package.json` y ya podrás seguir con Xcode.
+3. **Configurar firma en Xcode**:
+   - Abrir el proyecto iOS: `npx cap open ios`
+   - En Xcode, seleccionar el target "App"
+   - Ir a "Signing & Capabilities"
+   - Seleccionar tu **Team** (tu cuenta de Apple Developer, $99/año)
+   - Cambiar el **Bundle Identifier** si es necesario
+
+4. **Crear el Archive**:
+   - En Xcode: **Product → Destination → Any iOS Device**
+   - Luego: **Product → Archive**
+   - Cuando termine, se abre el Organizer
+
+5. **Subir a TestFlight**:
+   - En el Organizer, click **Distribute App**
+   - Seleccionar **App Store Connect**
+   - Seguir el wizard y subir
+
+6. **En App Store Connect** (appstoreconnect.apple.com):
+   - El build aparecerá en ~15 min
+   - Ir a tu app → TestFlight → agregar testers
+   - Los testers reciben invitación por email para instalar via la app TestFlight
+
+### Requisitos previos
+- Cuenta de Apple Developer Program ($99/año) — sin esto no puedes firmar ni subir
+- Crear el App ID en App Store Connect antes de subir
+
+### Cambios de código necesarios
+Solo un cambio: modificar `capacitor.config.ts` para quitar el `server.url` en producción.
+
