@@ -30,7 +30,7 @@ export default function AppLayout({ children }: Props) {
       {/* Top header */}
       <header className="h-10 md:h-12 border-b border-border flex items-center justify-between px-3 md:px-4 shrink-0">
         <div className="flex items-center gap-1.5">
-          <img src={flowemiLogo} alt="Flowemi logo" width={28} height={28} className="w-6 h-6 md:w-7 md:h-7" />
+          <img src={flowemiLogo} alt="Flowemi logo" width={28} height={28} className="w-6 h-6 md:w-7 md:h-7 rounded-lg" />
           <span className="text-xs md:text-sm font-semibold text-foreground tracking-tight">Flowemi</span>
         </div>
 
