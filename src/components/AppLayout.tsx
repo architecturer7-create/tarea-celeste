@@ -29,7 +29,7 @@ export default function AppLayout({ children }: Props) {
           <div className="w-6 h-6 md:w-7 md:h-7 rounded-md bg-primary flex items-center justify-center">
             <Zap className="w-3 h-3 md:w-3.5 md:h-3.5 text-primary-foreground" />
           </div>
-          <span className="text-xs md:text-sm font-semibold text-foreground tracking-tight">TaskFlow</span>
+          <span className="text-xs md:text-sm font-semibold text-foreground tracking-tight">Flowemi</span>
         </div>
 
         {/* Desktop nav */}

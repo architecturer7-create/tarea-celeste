@@ -37,11 +37,11 @@ export default function AuthPage() {
           <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
             <Zap className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-semibold text-foreground tracking-tight">TaskFlow</span>
+          <span className="text-xl font-semibold text-foreground tracking-tight">Flowemi</span>
         </div>
 
         {/* Form Card */}
-        <div className="glass-panel rounded-lg p-6">
+        <div className="glass-panel rounded-2xl p-6">
           <h2 className="text-lg font-medium text-foreground mb-1">
             {isLogin ? 'Iniciar sesión' : 'Crear cuenta'}
           </h2>
