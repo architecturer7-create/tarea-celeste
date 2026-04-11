@@ -1,49 +1,66 @@
 
-Objetivo: destrabar el clonado del repositorio para poder seguir con la app iOS y TestFlight.
+Objetivo: destrabar el acceso al repositorio para poder seguir con iOS/TestFlight.
 
-Diagnóstico
-- El error clave es `Repository not found`.
-- Eso significa que la URL `https://github.com/architecturer7-create/spworking.git` no existe, no se creó todavía, o el repo tiene otro nombre.
-- Como el clon falló, la carpeta `spworking` nunca se creó; por eso después fallaron `cd spworking`, `npm install` y los comandos de Capacitor.
+Lo que ya verifiqué
+- La URL `https://github.com/architecturer7-create/tarea-celeste` hoy responde 404.
+- En la lista pública de repos de `architecturer7-create` no aparece `tarea-celeste`.
+- Por eso el problema no está en `npm` ni en Capacitor: el bloqueo ocurre antes, en el clon.
+
+Do I know what the issue is?
+- Sí: GitHub no está exponiendo ese repo en esa URL para un acceso normal. Eso casi siempre significa una de estas 2 cosas:
+  1. el repo es privado y tu Mac no está autenticada con GitHub
+  2. el repo real existe, pero con otro owner o nombre distinto
 
 Plan
-1. Verificar en Lovable que no solo esté conectada tu cuenta de GitHub, sino que este proyecto ya tenga un repositorio creado/vinculado.
-2. Confirmar en GitHub si el repo existe con ese nombre exacto (`spworking`) dentro de `architecturer7-create`.
-3. Si no existe, crear el repositorio desde la integración de GitHub en Lovable y usar la URL exacta que genere.
-4. Si existe con otro nombre, copiar la URL correcta desde el botón `Code` en GitHub.
-5. Repetir el flujo local solo cuando el clon funcione:
-   ```bash
-   git clone <URL_REAL>
-   cd <NOMBRE_REAL_DEL_REPO>
-   npm install
-   npm run build
-   npx cap add ios
-   npx cap sync ios
-   npx cap open ios
-   ```
+1. Confirmar desde el navegador, iniciando sesión en GitHub, si `tarea-celeste` abre normalmente.
+2. Si abre solo estando logueado, tratarlo como repo privado:
+   - autenticar Git en tu Mac, o
+   - usar la URL SSH, o
+   - clonar desde GitHub Desktop.
+3. Si ni logueado abre, copiar la URL exacta desde el botón verde `Code` del repo y usar esa, porque el owner/nombre no coincide.
+4. Recién cuando el `git clone` funcione, repetir instalación y sync de iOS dentro de la carpeta del proyecto.
 
-Detalle técnico
-- `ENOENT /Users/aligarcia/package.json` no es otro problema distinto: solo indica que estabas ejecutando `npm` desde tu carpeta personal y no desde el proyecto.
-- `npx cap add ios` debe ejecutarse únicamente dentro del proyecto ya clonado.
-- Si iOS ya fue agregado antes en ese clon, luego normalmente bastará con:
-  ```bash
-  npm run build
-  npx cap sync ios
-  npx cap open ios
-  ```
+Comandos según el caso
 
-Resultado esperado
-- Cuando el repo correcto exista y uses su URL real, desaparecerá `Repository not found`.
-- Cuando entres a la carpeta correcta del proyecto, desaparecerán los errores de `package.json`.
-- Después ya podrás abrir Xcode y continuar el flujo hacia TestFlight.
-
-Siguiente ejecución recomendada
+Caso A: repo público o ya autenticado
 ```bash
-git clone <URL_REAL_DEL_REPO>
-cd <CARPETA_REAL>
+git clone https://github.com/architecturer7-create/tarea-celeste.git
+cd tarea-celeste
 npm install
 npm run build
 npx cap add ios
 npx cap sync ios
 npx cap open ios
 ```
+
+Caso B: repo privado
+```bash
+gh auth login
+git clone https://github.com/architecturer7-create/tarea-celeste.git
+cd tarea-celeste
+npm install
+npm run build
+npx cap add ios
+npx cap sync ios
+npx cap open ios
+```
+
+Caso C: repo privado con SSH
+```bash
+git clone git@github.com:architecturer7-create/tarea-celeste.git
+cd tarea-celeste
+npm install
+npm run build
+npx cap add ios
+npx cap sync ios
+npx cap open ios
+```
+
+Detalle técnico
+- `cd: no such file or directory: tarea-celeste` pasa porque el clon falló y la carpeta nunca se creó.
+- `ENOENT /Users/aligarcia/package.json` solo significa que ejecutaste `npm` desde tu carpeta personal, no desde el proyecto.
+- Los errores de `npx cap ...` también son consecuencia del clon fallido.
+
+Resultado esperado
+- Si el repo es privado y autenticas GitHub en tu Mac, o si usas la URL exacta correcta del botón `Code`, el clon dejará de fallar.
+- Después desaparecen automáticamente los errores de `package.json` y ya podrás seguir con Xcode.
