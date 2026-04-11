@@ -24,8 +24,11 @@ export default function AppLayout({ children }: Props) {
 
   return (
     <div className="h-dvh flex flex-col bg-background">
+      {/* Safe area top spacer */}
+      <div className="shrink-0 bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }} />
+
       {/* Top header */}
-      <header className="h-10 md:h-12 border-b border-border flex items-center justify-between px-3 md:px-4 shrink-0 safe-top">
+      <header className="h-10 md:h-12 border-b border-border flex items-center justify-between px-3 md:px-4 shrink-0">
         <div className="flex items-center gap-1.5">
           <img src={flowemiLogo} alt="Flowemi logo" width={28} height={28} className="w-6 h-6 md:w-7 md:h-7" />
           <span className="text-xs md:text-sm font-semibold text-foreground tracking-tight">Flowemi</span>
@@ -62,7 +65,7 @@ export default function AppLayout({ children }: Props) {
       </main>
 
       {/* Mobile bottom tabs */}
-      <nav className="md:hidden border-t border-border flex items-center justify-around h-12 shrink-0 safe-bottom bg-background">
+      <nav className="md:hidden border-t border-border flex items-center justify-around h-12 shrink-0 bg-background">
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
@@ -79,6 +82,9 @@ export default function AppLayout({ children }: Props) {
           );
         })}
       </nav>
+
+      {/* Safe area bottom spacer */}
+      <div className="md:hidden shrink-0 bg-background" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }} />
     </div>
   );
 }
