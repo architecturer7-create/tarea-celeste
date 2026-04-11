@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Zap } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import flowemiLogo from '@/assets/flowemi-logo.png';
 
 export default function AuthPage() {
   const { signIn, signUp } = useAuth();
@@ -34,9 +34,7 @@ export default function AuthPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-10">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-            <Zap className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <img src={flowemiLogo} alt="Flowemi logo" width={36} height={36} className="w-9 h-9" />
           <span className="text-xl font-semibold text-foreground tracking-tight">Flowemi</span>
         </div>
 
