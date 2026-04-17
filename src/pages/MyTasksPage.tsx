@@ -5,7 +5,9 @@ import type { Tarea, Proyecto, Perfil } from '@/lib/types';
 import { PRIORIDAD_CONFIG } from '@/lib/types';
 import { StatusDot } from '@/components/StatusDot';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, ChevronRight } from 'lucide-react';
+import { ClipboardList, ChevronRight, Trash2 } from 'lucide-react';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
+import { toast } from 'sonner';
 
 export default function MyTasksPage() {
   const { user } = useAuth();
