@@ -120,6 +120,16 @@ export default function ProjectDetailPage() {
     fetchData();
   };
 
+  const deleteTask = async (taskId: string) => {
+    const { error } = await supabase.from('tareas').delete().eq('id', taskId);
+    if (error) {
+      toast.error('Error al eliminar la tarea');
+    } else {
+      toast.success('Tarea eliminada');
+      fetchData();
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-full"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
   }
