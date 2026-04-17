@@ -106,7 +106,7 @@ export default function MyTasksPage() {
                 <ContextMenuContent>
                   <ContextMenuItem
                     onClick={() => deleteTask(task.id)}
-                    className="text-destructive focus:text-destructive"
+                    className="text-destructive focus:text-destructive focus:bg-muted"
                   >
                     <Trash2 className="w-3.5 h-3.5 mr-2" />
                     Eliminar tarea
