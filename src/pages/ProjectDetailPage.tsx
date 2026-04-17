@@ -10,6 +10,9 @@ import { StatusDot } from '@/components/StatusDot';
 import TaskDetailDrawer from '@/components/TaskDetailDrawer';
 import KanbanBoard from '@/components/KanbanBoard';
 import CreateTaskModal from '@/components/CreateTaskModal';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
+import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -115,6 +118,16 @@ export default function ProjectDetailPage() {
   const updateTaskStatus = async (taskId: string, newStatus: EstadoTarea) => {
     await supabase.from('tareas').update({ estado: newStatus }).eq('id', taskId);
     fetchData();
+  };
+
+  const deleteTask = async (taskId: string) => {
+    const { error } = await supabase.from('tareas').delete().eq('id', taskId);
+    if (error) {
+      toast.error('Error al eliminar la tarea');
+    } else {
+      toast.success('Tarea eliminada');
+      fetchData();
+    }
   };
 
   if (loading) {
@@ -263,33 +276,45 @@ export default function ProjectDetailPage() {
                         {completedTareas.map(task => {
                           const responsable = getProfile(task.responsable_id);
                           return (
-                          <div
-                              key={task.id}
-                              className="w-full flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 md:py-2.5 rounded-md hover:bg-muted/50 transition-colors text-left group"
-                            >
-                              <button
-                                onClick={(e) => { e.stopPropagation(); updateTaskStatus(task.id, 'pendiente'); }}
-                                className="w-4 h-4 md:w-5 md:h-5 rounded-full border border-status-completed bg-status-completed/20 flex items-center justify-center shrink-0 hover:bg-transparent hover:border-muted-foreground/40 transition-colors"
-                                title="Desmarcar completada"
+                          <ContextMenu key={task.id}>
+                            <ContextMenuTrigger asChild>
+                              <div
+                                className="w-full flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 md:py-2.5 rounded-md hover:bg-muted/50 transition-colors text-left group"
                               >
-                                <Check className="w-2.5 h-2.5 md:w-3 md:h-3 text-status-completed" />
-                              </button>
-                              <button
-                                onClick={() => setSelectedTask(task)}
-                                className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 text-left"
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); updateTaskStatus(task.id, 'pendiente'); }}
+                                  className="w-4 h-4 md:w-5 md:h-5 rounded-full border border-status-completed bg-status-completed/20 flex items-center justify-center shrink-0 hover:bg-transparent hover:border-muted-foreground/40 transition-colors"
+                                  title="Desmarcar completada"
+                                >
+                                  <Check className="w-2.5 h-2.5 md:w-3 md:h-3 text-status-completed" />
+                                </button>
+                                <button
+                                  onClick={() => setSelectedTask(task)}
+                                  className="flex items-center gap-2 md:gap-3 flex-1 min-w-0 text-left"
+                                >
+                                  {responsable && (
+                                    <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} avatarUrl={responsable.avatar_url} size="sm" />
+                                  )}
+                                  <span className="text-xs md:text-sm text-muted-foreground flex-1 truncate line-through">{task.titulo}</span>
+                                  <span className={`shrink-0 px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-medium border ${PRIORIDAD_CONFIG[task.prioridad].className}`}>
+                                    {PRIORIDAD_CONFIG[task.prioridad].label}
+                                  </span>
+                                  {task.fecha_limite && (
+                                    <span className="text-[10px] md:text-[11px] text-muted-foreground/60">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
+                                  )}
+                                </button>
+                              </div>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                              <ContextMenuItem
+                                onClick={() => deleteTask(task.id)}
+                                className="text-destructive focus:text-destructive"
                               >
-                                {responsable && (
-                                  <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} avatarUrl={responsable.avatar_url} size="sm" />
-                                )}
-                                <span className="text-xs md:text-sm text-muted-foreground flex-1 truncate line-through">{task.titulo}</span>
-                                <span className={`shrink-0 px-1.5 md:px-2 py-0.5 rounded-full text-[9px] md:text-[10px] font-medium border ${PRIORIDAD_CONFIG[task.prioridad].className}`}>
-                                  {PRIORIDAD_CONFIG[task.prioridad].label}
-                                </span>
-                                {task.fecha_limite && (
-                                  <span className="text-[10px] md:text-[11px] text-muted-foreground/60">{new Date(task.fecha_limite).toLocaleDateString('es')}</span>
-                                )}
-                              </button>
-                            </div>
+                                <Trash2 className="w-3.5 h-3.5 mr-2" />
+                                Eliminar tarea
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          </ContextMenu>
                           );
                         })}
                       </div>
