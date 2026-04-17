@@ -10,6 +10,9 @@ import { StatusDot } from '@/components/StatusDot';
 import TaskDetailDrawer from '@/components/TaskDetailDrawer';
 import KanbanBoard from '@/components/KanbanBoard';
 import CreateTaskModal from '@/components/CreateTaskModal';
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
+import { Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
