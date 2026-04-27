@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight } from 'lucide-react';
+import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Proyecto, Tarea, MiembroProyecto, Perfil, EstadoTarea } from '@/lib/types';
@@ -10,6 +10,7 @@ import { StatusDot } from '@/components/StatusDot';
 import TaskDetailDrawer from '@/components/TaskDetailDrawer';
 import KanbanBoard from '@/components/KanbanBoard';
 import CreateTaskModal from '@/components/CreateTaskModal';
+import SheetsView from '@/components/SheetsView';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -23,6 +24,7 @@ export default function ProjectDetailPage() {
   const [miembros, setMiembros] = useState<MiembroProyecto[]>([]);
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [view, setView] = useState<'list' | 'kanban'>('list');
+  const [section, setSection] = useState<'tareas' | 'sheets'>('tareas');
   const [selectedTask, setSelectedTask] = useState<Tarea | null>(null);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -166,6 +168,7 @@ export default function ProjectDetailPage() {
             <button onClick={() => setShowInvite(true)} className="text-muted-foreground hover:text-foreground transition-colors">
               <UserPlus className="w-4 h-4" />
             </button>
+            {section === 'tareas' && (
             <div className="flex items-center border border-border rounded-md overflow-hidden ml-2">
               <button
                 onClick={() => setView('list')}
@@ -180,10 +183,32 @@ export default function ProjectDetailPage() {
                 <Columns className="w-4 h-4" />
               </button>
             </div>
+            )}
           </div>
         </div>
 
+        {/* Section tabs */}
+        <div className="flex items-center gap-1 -mx-1">
+          <button
+            onClick={() => setSection('tareas')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] md:text-xs transition-colors ${
+              section === 'tareas' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <ListChecks className="w-3.5 h-3.5" /> Tareas
+          </button>
+          <button
+            onClick={() => setSection('sheets')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] md:text-xs transition-colors ${
+              section === 'sheets' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" /> Sheets
+          </button>
+        </div>
+
         {/* Counters and filters */}
+        {section === 'tareas' && (
         <div className="flex items-center justify-between flex-wrap gap-1.5 md:gap-2">
           <div className="flex items-center gap-2 md:gap-3 text-[10px] md:text-[11px] text-muted-foreground">
             <span>{counts.total} Total</span>
@@ -207,11 +232,14 @@ export default function ProjectDetailPage() {
             ))}
           </div>
         </div>
+        )}
       </div>
 
       {/* Content */}
       <div className="flex-1 overflow-hidden relative">
-        {view === 'list' ? (
+        {section === 'sheets' ? (
+          <SheetsView proyectoId={id!} />
+        ) : view === 'list' ? (
           <div className="h-full overflow-y-auto p-3 md:p-4">
             {activeTareas.length === 0 && completedTareas.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
