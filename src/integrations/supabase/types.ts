@@ -84,6 +84,36 @@ export type Database = {
           },
         ]
       }
+      partidas_planos: {
+        Row: {
+          color: string
+          creado_por: string
+          fecha_creacion: string
+          id: string
+          nombre: string
+          orden: number
+          proyecto_id: string
+        }
+        Insert: {
+          color?: string
+          creado_por: string
+          fecha_creacion?: string
+          id?: string
+          nombre: string
+          orden?: number
+          proyecto_id: string
+        }
+        Update: {
+          color?: string
+          creado_por?: string
+          fecha_creacion?: string
+          id?: string
+          nombre?: string
+          orden?: number
+          proyecto_id?: string
+        }
+        Relationships: []
+      }
       perfiles: {
         Row: {
           avatar_url: string | null
@@ -113,6 +143,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      planos: {
+        Row: {
+          codigo: string
+          creado_por: string
+          entregado: boolean
+          fecha_actualizacion: string
+          fecha_creacion: string
+          fecha_entrega: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          partida_id: string
+          proyecto_id: string
+        }
+        Insert: {
+          codigo?: string
+          creado_por: string
+          entregado?: boolean
+          fecha_actualizacion?: string
+          fecha_creacion?: string
+          fecha_entrega?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          partida_id: string
+          proyecto_id: string
+        }
+        Update: {
+          codigo?: string
+          creado_por?: string
+          entregado?: boolean
+          fecha_actualizacion?: string
+          fecha_creacion?: string
+          fecha_entrega?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          partida_id?: string
+          proyecto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planos_partida_id_fkey"
+            columns: ["partida_id"]
+            isOneToOne: false
+            referencedRelation: "partidas_planos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proyectos: {
         Row: {
