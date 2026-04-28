@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Trash2, Check, ChevronRight, FolderPlus, X, GripVertical, Pencil } from 'lucide-react';
+import { Plus, Trash2, Check, ChevronRight, FolderPlus, X, GripVertical, Pencil, UserCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { PROJECT_COLORS } from '@/lib/types';
+import { UserAvatar } from '@/components/UserAvatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface Partida {
   id: string;
@@ -21,12 +23,21 @@ interface Plano {
   codigo: string;
   nombre: string;
   entregado: boolean;
+  responsable_id?: string | null;
+}
+
+interface MiembroPerfil {
+  user_id: string;
+  nombre: string;
+  color_avatar: string;
+  avatar_url: string | null;
 }
 
 export default function SheetsView({ proyectoId }: { proyectoId: string }) {
   const { user } = useAuth();
   const [partidas, setPartidas] = useState<Partida[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
+  const [miembros, setMiembros] = useState<MiembroPerfil[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewPartida, setShowNewPartida] = useState(false);
   const [newPartidaNombre, setNewPartidaNombre] = useState('');
@@ -34,19 +45,32 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [newCodigo, setNewCodigo] = useState('');
   const [newNombre, setNewNombre] = useState('');
+  const [newResponsable, setNewResponsable] = useState<string | null>(null);
   const [editingPlano, setEditingPlano] = useState<string | null>(null);
   const [editCodigo, setEditCodigo] = useState('');
   const [editNombre, setEditNombre] = useState('');
+  const [editResponsable, setEditResponsable] = useState<string | null>(null);
   const [dragPartida, setDragPartida] = useState<string | null>(null);
   const [dragOverPartida, setDragOverPartida] = useState<string | null>(null);
 
   const fetchData = async () => {
-    const [pa, pl] = await Promise.all([
+    const [pa, pl, mb] = await Promise.all([
       supabase.from('partidas_planos').select('*').eq('proyecto_id', proyectoId).order('orden'),
       supabase.from('planos').select('*').eq('proyecto_id', proyectoId).order('fecha_creacion'),
+      supabase.from('miembros_proyecto').select('usuario_id').eq('proyecto_id', proyectoId),
     ]);
     if (pa.data) setPartidas(pa.data as Partida[]);
     if (pl.data) setPlanos(pl.data as Plano[]);
+    if (mb.data && mb.data.length > 0) {
+      const ids = mb.data.map((m: any) => m.usuario_id);
+      const { data: pf } = await supabase
+        .from('perfiles')
+        .select('user_id, nombre, color_avatar, avatar_url')
+        .in('user_id', ids);
+      if (pf) setMiembros(pf as MiembroPerfil[]);
+    } else {
+      setMiembros([]);
+    }
     setLoading(false);
   };
 
@@ -107,11 +131,12 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
       partida_id: partidaId,
       codigo: newCodigo.trim(),
       nombre: newNombre.trim(),
+      responsable_id: newResponsable,
       creado_por: user.id,
     });
     if (error) toast.error('Error al añadir plano');
     else {
-      setNewCodigo(''); setNewNombre(''); setAddingTo(null);
+      setNewCodigo(''); setNewNombre(''); setNewResponsable(null); setAddingTo(null);
       fetchData();
     }
   };
@@ -135,6 +160,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
     setEditingPlano(p.id);
     setEditCodigo(p.codigo || '');
     setEditNombre(p.nombre);
+    setEditResponsable(p.responsable_id ?? null);
   };
 
   const saveEditPlano = async (id: string) => {
@@ -142,6 +168,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
     await supabase.from('planos').update({
       codigo: editCodigo.trim(),
       nombre: editNombre.trim(),
+      responsable_id: editResponsable,
     }).eq('id', id);
     setEditingPlano(null);
     fetchData();
