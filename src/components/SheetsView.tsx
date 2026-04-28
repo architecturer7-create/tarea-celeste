@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Trash2, Check, ChevronRight, FolderPlus, X, GripVertical, Pencil } from 'lucide-react';
+import { Plus, Trash2, Check, ChevronRight, FolderPlus, X, GripVertical, Pencil, UserCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { PROJECT_COLORS } from '@/lib/types';
+import { UserAvatar } from '@/components/UserAvatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface Partida {
   id: string;
@@ -21,12 +23,21 @@ interface Plano {
   codigo: string;
   nombre: string;
   entregado: boolean;
+  responsable_id?: string | null;
+}
+
+interface MiembroPerfil {
+  user_id: string;
+  nombre: string;
+  color_avatar: string;
+  avatar_url: string | null;
 }
 
 export default function SheetsView({ proyectoId }: { proyectoId: string }) {
   const { user } = useAuth();
   const [partidas, setPartidas] = useState<Partida[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
+  const [miembros, setMiembros] = useState<MiembroPerfil[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewPartida, setShowNewPartida] = useState(false);
   const [newPartidaNombre, setNewPartidaNombre] = useState('');
@@ -34,19 +45,32 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [newCodigo, setNewCodigo] = useState('');
   const [newNombre, setNewNombre] = useState('');
+  const [newResponsable, setNewResponsable] = useState<string | null>(null);
   const [editingPlano, setEditingPlano] = useState<string | null>(null);
   const [editCodigo, setEditCodigo] = useState('');
   const [editNombre, setEditNombre] = useState('');
+  const [editResponsable, setEditResponsable] = useState<string | null>(null);
   const [dragPartida, setDragPartida] = useState<string | null>(null);
   const [dragOverPartida, setDragOverPartida] = useState<string | null>(null);
 
   const fetchData = async () => {
-    const [pa, pl] = await Promise.all([
+    const [pa, pl, mb] = await Promise.all([
       supabase.from('partidas_planos').select('*').eq('proyecto_id', proyectoId).order('orden'),
       supabase.from('planos').select('*').eq('proyecto_id', proyectoId).order('fecha_creacion'),
+      supabase.from('miembros_proyecto').select('usuario_id').eq('proyecto_id', proyectoId),
     ]);
     if (pa.data) setPartidas(pa.data as Partida[]);
     if (pl.data) setPlanos(pl.data as Plano[]);
+    if (mb.data && mb.data.length > 0) {
+      const ids = mb.data.map((m: any) => m.usuario_id);
+      const { data: pf } = await supabase
+        .from('perfiles')
+        .select('user_id, nombre, color_avatar, avatar_url')
+        .in('user_id', ids);
+      if (pf) setMiembros(pf as MiembroPerfil[]);
+    } else {
+      setMiembros([]);
+    }
     setLoading(false);
   };
 
@@ -107,11 +131,12 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
       partida_id: partidaId,
       codigo: newCodigo.trim(),
       nombre: newNombre.trim(),
+      responsable_id: newResponsable,
       creado_por: user.id,
     });
     if (error) toast.error('Error al añadir plano');
     else {
-      setNewCodigo(''); setNewNombre(''); setAddingTo(null);
+      setNewCodigo(''); setNewNombre(''); setNewResponsable(null); setAddingTo(null);
       fetchData();
     }
   };
@@ -135,6 +160,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
     setEditingPlano(p.id);
     setEditCodigo(p.codigo || '');
     setEditNombre(p.nombre);
+    setEditResponsable(p.responsable_id ?? null);
   };
 
   const saveEditPlano = async (id: string) => {
@@ -142,6 +168,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
     await supabase.from('planos').update({
       codigo: editCodigo.trim(),
       nombre: editNombre.trim(),
+      responsable_id: editResponsable,
     }).eq('id', id);
     setEditingPlano(null);
     fetchData();
@@ -314,6 +341,11 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                                 onKeyDown={e => { if (e.key === 'Enter') saveEditPlano(plano.id); if (e.key === 'Escape') setEditingPlano(null); }}
                                 className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary"
                               />
+                              <ResponsablePicker
+                                miembros={miembros}
+                                value={editResponsable}
+                                onChange={setEditResponsable}
+                              />
                               <button onClick={() => saveEditPlano(plano.id)} className="text-primary hover:text-primary/80 p-1">
                                 <Check className="w-3.5 h-3.5" />
                               </button>
@@ -338,6 +370,20 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                               >
                                 <Pencil className="w-3 h-3" />
                               </button>
+                              {(() => {
+                                const r = miembros.find(m => m.user_id === plano.responsable_id);
+                                return r ? (
+                                  <UserAvatar
+                                    nombre={r.nombre}
+                                    color={r.color_avatar}
+                                    avatarUrl={r.avatar_url}
+                                    size="sm"
+                                    className="ml-auto shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full border border-dashed border-border ml-auto shrink-0" title="Sin asignar" />
+                                );
+                              })()}
                             </>
                           )}
                         </div>
@@ -365,14 +411,19 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                       <input
                         value={newNombre}
                         onChange={e => setNewNombre(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') addPlano(pa.id); if (e.key === 'Escape') { setAddingTo(null); setNewCodigo(''); setNewNombre(''); } }}
+                        onKeyDown={e => { if (e.key === 'Enter') addPlano(pa.id); if (e.key === 'Escape') { setAddingTo(null); setNewCodigo(''); setNewNombre(''); setNewResponsable(null); } }}
                         placeholder="Nombre del plano"
                         className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                      <ResponsablePicker
+                        miembros={miembros}
+                        value={newResponsable}
+                        onChange={setNewResponsable}
                       />
                       <button onClick={() => addPlano(pa.id)} className="text-primary hover:text-primary/80 p-1">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => { setAddingTo(null); setNewCodigo(''); setNewNombre(''); }} className="text-muted-foreground hover:text-foreground p-1">
+                      <button onClick={() => { setAddingTo(null); setNewCodigo(''); setNewNombre(''); setNewResponsable(null); }} className="text-muted-foreground hover:text-foreground p-1">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -419,5 +470,63 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
         )}
       </div>
     </div>
+  );
+}
+
+function ResponsablePicker({
+  miembros,
+  value,
+  onChange,
+}: {
+  miembros: MiembroPerfil[];
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  const selected = miembros.find(m => m.user_id === value) || null;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="shrink-0 rounded-full hover:opacity-80 transition-opacity"
+          title={selected ? `Asignado: ${selected.nombre}` : 'Asignar responsable'}
+        >
+          {selected ? (
+            <UserAvatar
+              nombre={selected.nombre}
+              color={selected.color_avatar}
+              avatarUrl={selected.avatar_url}
+              size="sm"
+            />
+          ) : (
+            <div className="w-6 h-6 rounded-full border border-dashed border-border flex items-center justify-center text-muted-foreground">
+              <UserCircle2 className="w-3.5 h-3.5" />
+            </div>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-1 bg-popover border-border" align="end">
+        <button
+          onClick={() => onChange(null)}
+          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted transition-colors ${value === null ? 'text-foreground' : 'text-muted-foreground'}`}
+        >
+          <div className="w-6 h-6 rounded-full border border-dashed border-border flex items-center justify-center">
+            <X className="w-3 h-3" />
+          </div>
+          Sin asignar
+        </button>
+        {miembros.map(m => (
+          <button
+            key={m.user_id}
+            onClick={() => onChange(m.user_id)}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted transition-colors ${value === m.user_id ? 'text-foreground' : 'text-muted-foreground'}`}
+          >
+            <UserAvatar nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" />
+            <span className="truncate">{m.nombre}</span>
+            {value === m.user_id && <Check className="w-3 h-3 ml-auto text-primary" />}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
   );
 }

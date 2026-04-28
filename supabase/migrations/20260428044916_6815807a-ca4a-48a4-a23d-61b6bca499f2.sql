@@ -1,0 +1,1 @@
+ALTER TABLE public.planos ADD COLUMN responsable_id uuid;
