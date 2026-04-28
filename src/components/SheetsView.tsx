@@ -202,7 +202,13 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                     <span className="text-muted-foreground tabular-nums">{done}/{list.length}</span>
                   </div>
                   <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-                    <div className="h-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: pa.color }} />
+                    <div
+                      className="h-full transition-all duration-500"
+                      style={{
+                        width: `${pct}%`,
+                        background: `linear-gradient(to right, ${pa.color}, ${pa.color}66)`,
+                      }}
+                    />
                   </div>
                 </div>
               );
