@@ -184,7 +184,7 @@ export default function ProjectsPage() {
               <button
                 key={p.id}
                 onClick={() => navigate(`/proyecto/${p.id}`)}
-                className="glass-panel rounded-lg p-3 md:p-4 text-left hover:border-border/80 transition-colors group border-0"
+                className="glass-panel rounded-lg p-3 md:p-4 text-left hover:border-border/80 transition-colors group border-0 relative"
               >
                 <div className="flex gap-3">
                   {/* Columna izquierda: contenido */}
