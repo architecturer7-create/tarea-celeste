@@ -472,3 +472,61 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
     </div>
   );
 }
+
+function ResponsablePicker({
+  miembros,
+  value,
+  onChange,
+}: {
+  miembros: MiembroPerfil[];
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
+  const selected = miembros.find(m => m.user_id === value) || null;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="shrink-0 rounded-full hover:opacity-80 transition-opacity"
+          title={selected ? `Asignado: ${selected.nombre}` : 'Asignar responsable'}
+        >
+          {selected ? (
+            <UserAvatar
+              nombre={selected.nombre}
+              color={selected.color_avatar}
+              avatarUrl={selected.avatar_url}
+              size="sm"
+            />
+          ) : (
+            <div className="w-6 h-6 rounded-full border border-dashed border-border flex items-center justify-center text-muted-foreground">
+              <UserCircle2 className="w-3.5 h-3.5" />
+            </div>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-1 bg-popover border-border" align="end">
+        <button
+          onClick={() => onChange(null)}
+          className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted transition-colors ${value === null ? 'text-foreground' : 'text-muted-foreground'}`}
+        >
+          <div className="w-6 h-6 rounded-full border border-dashed border-border flex items-center justify-center">
+            <X className="w-3 h-3" />
+          </div>
+          Sin asignar
+        </button>
+        {miembros.map(m => (
+          <button
+            key={m.user_id}
+            onClick={() => onChange(m.user_id)}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted transition-colors ${value === m.user_id ? 'text-foreground' : 'text-muted-foreground'}`}
+          >
+            <UserAvatar nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" />
+            <span className="truncate">{m.nombre}</span>
+            {value === m.user_id && <Check className="w-3 h-3 ml-auto text-primary" />}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
