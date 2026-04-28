@@ -213,8 +213,8 @@ export default function ProjectsPage() {
 
                   {/* Columna derecha: anillo grande, alineado al fondo para no chocar con los botones del header */}
                   {sheets.total > 0 && (() => {
-                    const size = 76;
-                    const stroke = 6;
+                    const size = 60;
+                    const stroke = 5;
                     const r = (size - stroke) / 2;
                     const c = 2 * Math.PI * r;
                     const offset = c - (sheets.pct / 100) * c;
@@ -240,8 +240,8 @@ export default function ProjectsPage() {
                           />
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-                          <span className="text-sm font-semibold text-foreground tabular-nums">{sheets.pct}%</span>
-                          <span className="text-[9px] text-muted-foreground tabular-nums mt-0.5">{sheets.done}/{sheets.total}</span>
+                          <span className="text-[11px] font-semibold text-foreground tabular-nums">{sheets.pct}%</span>
+                          <span className="text-[8px] text-muted-foreground tabular-nums mt-0.5">{sheets.done}/{sheets.total}</span>
                         </div>
                       </div>
                     );
