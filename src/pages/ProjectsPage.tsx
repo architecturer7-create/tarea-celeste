@@ -210,32 +210,49 @@ export default function ProjectsPage() {
                   {counts.en_progreso > 0 && <span className="text-status-progress">{counts.en_progreso} en progreso</span>}
                   {counts.bloqueada > 0 && <span className="text-status-blocked">{counts.bloqueada} bloqueadas</span>}
                 </div>
-                {sheets.total > 0 && (
-                  <div className="mb-2 md:mb-3 space-y-1">
-                    <div className="flex items-center justify-between text-[10px] md:text-[11px] text-muted-foreground">
-                      <span>Sheets · {sheets.done}/{sheets.total} planos</span>
-                      <span className="tabular-nums text-foreground">{sheets.pct}%</span>
-                    </div>
-                    <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
-                      <div
-                        className="h-full transition-all duration-500"
-                        style={{
-                          width: `${sheets.pct}%`,
-                          background: `linear-gradient(to right, ${p.color}, ${p.color}80)`,
-                        }}
-                      />
-                    </div>
+                <div className="flex items-end justify-between gap-3">
+                  <div className="flex -space-x-1.5">
+                    {members.slice(0, 5).map(m => (
+                      <UserAvatar key={m.user_id} nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" />
+                    ))}
+                    {members.length > 5 && (
+                      <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground">
+                        +{members.length - 5}
+                      </span>
+                    )}
                   </div>
-                )}
-                <div className="flex -space-x-1.5">
-                  {members.slice(0, 5).map(m => (
-                    <UserAvatar key={m.user_id} nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" />
-                  ))}
-                  {members.length > 5 && (
-                    <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground">
-                      +{members.length - 5}
-                    </span>
-                  )}
+                  {sheets.total > 0 && (() => {
+                    const r = 18;
+                    const c = 2 * Math.PI * r;
+                    const offset = c - (sheets.pct / 100) * c;
+                    const gradId = `sheets-grad-${p.id}`;
+                    return (
+                      <div className="relative shrink-0" title={`${sheets.done}/${sheets.total} planos`}>
+                        <svg width="44" height="44" viewBox="0 0 44 44" className="-rotate-90">
+                          <defs>
+                            <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor={p.color} />
+                              <stop offset="100%" stopColor={p.color} stopOpacity="0.4" />
+                            </linearGradient>
+                          </defs>
+                          <circle cx="22" cy="22" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
+                          <circle
+                            cx="22" cy="22" r={r} fill="none"
+                            stroke={`url(#${gradId})`}
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeDasharray={c}
+                            strokeDashoffset={offset}
+                            className="transition-all duration-500"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+                          <span className="text-[10px] font-semibold text-foreground tabular-nums">{sheets.pct}%</span>
+                          <span className="text-[8px] text-muted-foreground tabular-nums mt-0.5">{sheets.done}/{sheets.total}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </button>
             );
