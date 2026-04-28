@@ -186,60 +186,53 @@ export default function ProjectsPage() {
                 onClick={() => navigate(`/proyecto/${p.id}`)}
                 className="glass-panel rounded-lg p-3 md:p-4 text-left hover:border-border/80 transition-colors group border-0"
               >
-                <div className="flex items-center gap-2 mb-2 md:mb-3">
-                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-sm" style={{ backgroundColor: p.color }} />
-                  <span className="text-xs md:text-sm font-medium text-foreground truncate flex-1">{p.nombre}</span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setEditName(p.nombre); setEditTarget(p.id); }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all p-1"
-                    title="Editar nombre"
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(p.id); }}
-                    className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 -mr-1"
-                    title="Eliminar proyecto"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-x-2 md:gap-x-3 gap-y-1 text-[10px] md:text-[11px] text-muted-foreground mb-2 md:mb-3">
-                  <span>{counts.total} total</span>
-                  {counts.completada > 0 && <span className="text-status-completed">{counts.completada} completadas</span>}
-                  {counts.en_progreso > 0 && <span className="text-status-progress">{counts.en_progreso} en progreso</span>}
-                  {counts.bloqueada > 0 && <span className="text-status-blocked">{counts.bloqueada} bloqueadas</span>}
-                </div>
-                <div className="flex items-end justify-between gap-3">
-                  <div className="flex -space-x-1.5">
-                    {members.slice(0, 5).map(m => (
-                      <UserAvatar key={m.user_id} nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" />
-                    ))}
-                    {members.length > 5 && (
-                      <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground">
-                        +{members.length - 5}
-                      </span>
-                    )}
+                <div className="flex gap-3">
+                  {/* Columna izquierda: contenido */}
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    <div className="flex items-center gap-2 mb-2 md:mb-3 pr-16">
+                      <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-sm shrink-0" style={{ backgroundColor: p.color }} />
+                      <span className="text-xs md:text-sm font-medium text-foreground truncate flex-1">{p.nombre}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-x-2 md:gap-x-3 gap-y-1 text-[10px] md:text-[11px] text-muted-foreground mb-2 md:mb-3">
+                      <span>{counts.total} total</span>
+                      {counts.completada > 0 && <span className="text-status-completed">{counts.completada} completadas</span>}
+                      {counts.en_progreso > 0 && <span className="text-status-progress">{counts.en_progreso} en progreso</span>}
+                      {counts.bloqueada > 0 && <span className="text-status-blocked">{counts.bloqueada} bloqueadas</span>}
+                    </div>
+                    <div className="flex -space-x-1.5 mt-auto">
+                      {members.slice(0, 5).map(m => (
+                        <UserAvatar key={m.user_id} nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" />
+                      ))}
+                      {members.length > 5 && (
+                        <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground">
+                          +{members.length - 5}
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Columna derecha: anillo grande, alineado al fondo para no chocar con los botones del header */}
                   {sheets.total > 0 && (() => {
-                    const r = 18;
+                    const size = 76;
+                    const stroke = 6;
+                    const r = (size - stroke) / 2;
                     const c = 2 * Math.PI * r;
                     const offset = c - (sheets.pct / 100) * c;
                     const gradId = `sheets-grad-${p.id}`;
                     return (
-                      <div className="relative shrink-0" title={`${sheets.done}/${sheets.total} planos`}>
-                        <svg width="44" height="44" viewBox="0 0 44 44" className="-rotate-90">
+                      <div className="relative shrink-0 self-end" title={`${sheets.done}/${sheets.total} planos`} style={{ width: size, height: size }}>
+                        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
                           <defs>
                             <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
                               <stop offset="0%" stopColor={p.color} />
                               <stop offset="100%" stopColor={p.color} stopOpacity="0.4" />
                             </linearGradient>
                           </defs>
-                          <circle cx="22" cy="22" r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth="4" />
+                          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth={stroke} />
                           <circle
-                            cx="22" cy="22" r={r} fill="none"
+                            cx={size / 2} cy={size / 2} r={r} fill="none"
                             stroke={`url(#${gradId})`}
-                            strokeWidth="4"
+                            strokeWidth={stroke}
                             strokeLinecap="round"
                             strokeDasharray={c}
                             strokeDashoffset={offset}
@@ -247,13 +240,29 @@ export default function ProjectsPage() {
                           />
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-                          <span className="text-[10px] font-semibold text-foreground tabular-nums">{sheets.pct}%</span>
-                          <span className="text-[8px] text-muted-foreground tabular-nums mt-0.5">{sheets.done}/{sheets.total}</span>
+                          <span className="text-sm font-semibold text-foreground tabular-nums">{sheets.pct}%</span>
+                          <span className="text-[9px] text-muted-foreground tabular-nums mt-0.5">{sheets.done}/{sheets.total}</span>
                         </div>
                       </div>
                     );
                   })()}
                 </div>
+
+                {/* Botones flotantes en esquina superior derecha */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setEditName(p.nombre); setEditTarget(p.id); }}
+                  className="absolute top-2 right-9 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all p-1 z-10"
+                  title="Editar nombre"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDeleteTarget(p.id); }}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all p-1 z-10"
+                  title="Eliminar proyecto"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </button>
             );
           })}
