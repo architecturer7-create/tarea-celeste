@@ -341,6 +341,11 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                                 onKeyDown={e => { if (e.key === 'Enter') saveEditPlano(plano.id); if (e.key === 'Escape') setEditingPlano(null); }}
                                 className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary"
                               />
+                              <ResponsablePicker
+                                miembros={miembros}
+                                value={editResponsable}
+                                onChange={setEditResponsable}
+                              />
                               <button onClick={() => saveEditPlano(plano.id)} className="text-primary hover:text-primary/80 p-1">
                                 <Check className="w-3.5 h-3.5" />
                               </button>
@@ -365,6 +370,20 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                               >
                                 <Pencil className="w-3 h-3" />
                               </button>
+                              {(() => {
+                                const r = miembros.find(m => m.user_id === plano.responsable_id);
+                                return r ? (
+                                  <UserAvatar
+                                    nombre={r.nombre}
+                                    color={r.color_avatar}
+                                    avatarUrl={r.avatar_url}
+                                    size="sm"
+                                    className="ml-auto shrink-0"
+                                  />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full border border-dashed border-border ml-auto shrink-0" title="Sin asignar" />
+                                );
+                              })()}
                             </>
                           )}
                         </div>
@@ -392,14 +411,19 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                       <input
                         value={newNombre}
                         onChange={e => setNewNombre(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') addPlano(pa.id); if (e.key === 'Escape') { setAddingTo(null); setNewCodigo(''); setNewNombre(''); } }}
+                        onKeyDown={e => { if (e.key === 'Enter') addPlano(pa.id); if (e.key === 'Escape') { setAddingTo(null); setNewCodigo(''); setNewNombre(''); setNewResponsable(null); } }}
                         placeholder="Nombre del plano"
                         className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary"
+                      />
+                      <ResponsablePicker
+                        miembros={miembros}
+                        value={newResponsable}
+                        onChange={setNewResponsable}
                       />
                       <button onClick={() => addPlano(pa.id)} className="text-primary hover:text-primary/80 p-1">
                         <Check className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => { setAddingTo(null); setNewCodigo(''); setNewNombre(''); }} className="text-muted-foreground hover:text-foreground p-1">
+                      <button onClick={() => { setAddingTo(null); setNewCodigo(''); setNewNombre(''); setNewResponsable(null); }} className="text-muted-foreground hover:text-foreground p-1">
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
