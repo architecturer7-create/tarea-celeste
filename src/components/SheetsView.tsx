@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Trash2, Check, ChevronRight, FolderPlus, X } from 'lucide-react';
+import { Plus, Trash2, Check, ChevronRight, FolderPlus, X, GripVertical, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { PROJECT_COLORS } from '@/lib/types';
@@ -34,6 +34,11 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
   const [addingTo, setAddingTo] = useState<string | null>(null);
   const [newCodigo, setNewCodigo] = useState('');
   const [newNombre, setNewNombre] = useState('');
+  const [editingPlano, setEditingPlano] = useState<string | null>(null);
+  const [editCodigo, setEditCodigo] = useState('');
+  const [editNombre, setEditNombre] = useState('');
+  const [dragPartida, setDragPartida] = useState<string | null>(null);
+  const [dragOverPartida, setDragOverPartida] = useState<string | null>(null);
 
   const fetchData = async () => {
     const [pa, pl] = await Promise.all([
@@ -126,6 +131,37 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
     fetchData();
   };
 
+  const startEditPlano = (p: Plano) => {
+    setEditingPlano(p.id);
+    setEditCodigo(p.codigo || '');
+    setEditNombre(p.nombre);
+  };
+
+  const saveEditPlano = async (id: string) => {
+    if (!editNombre.trim()) return;
+    await supabase.from('planos').update({
+      codigo: editCodigo.trim(),
+      nombre: editNombre.trim(),
+    }).eq('id', id);
+    setEditingPlano(null);
+    fetchData();
+  };
+
+  const reorderPartidas = async (sourceId: string, targetId: string) => {
+    if (sourceId === targetId) return;
+    const ordered = [...partidas];
+    const fromIdx = ordered.findIndex(p => p.id === sourceId);
+    const toIdx = ordered.findIndex(p => p.id === targetId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const [moved] = ordered.splice(fromIdx, 1);
+    ordered.splice(toIdx, 0, moved);
+    setPartidas(ordered);
+    await Promise.all(ordered.map((p, i) =>
+      supabase.from('partidas_planos').update({ orden: i }).eq('id', p.id)
+    ));
+    fetchData();
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-full"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
   }
@@ -193,19 +229,46 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
           const list = planosByPartida.get(pa.id) || [];
           const isCollapsed = collapsed[pa.id];
           const done = list.filter(p => p.entregado).length;
+          const paPct = list.length === 0 ? 0 : Math.round((done / list.length) * 100);
           return (
-            <div key={pa.id} className="rounded-lg border border-border overflow-hidden">
+            <div
+              key={pa.id}
+              draggable
+              onDragStart={() => setDragPartida(pa.id)}
+              onDragOver={(e) => { e.preventDefault(); setDragOverPartida(pa.id); }}
+              onDragLeave={() => setDragOverPartida(null)}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (dragPartida) reorderPartidas(dragPartida, pa.id);
+                setDragPartida(null);
+                setDragOverPartida(null);
+              }}
+              onDragEnd={() => { setDragPartida(null); setDragOverPartida(null); }}
+              className={`rounded-lg border border-border overflow-hidden transition-all ${
+                dragOverPartida === pa.id && dragPartida !== pa.id ? 'border-primary/60 ring-1 ring-primary/30' : ''
+              } ${dragPartida === pa.id ? 'opacity-50' : ''}`}
+            >
               <ContextMenu>
                 <ContextMenuTrigger asChild>
-                  <button
-                    onClick={() => setCollapsed(c => ({ ...c, [pa.id]: !c[pa.id] }))}
-                    className="w-full flex items-center gap-2 px-3 py-2 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
-                  >
-                    <ChevronRight className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${!isCollapsed ? 'rotate-90' : ''}`} />
-                    <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: pa.color }} />
-                    <span className="text-xs md:text-sm font-medium text-foreground flex-1">{pa.nombre}</span>
-                    <span className="text-[10px] text-muted-foreground tabular-nums">{done}/{list.length}</span>
-                  </button>
+                  <div className="relative bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <div
+                      className="absolute inset-y-0 left-0 pointer-events-none transition-all duration-500"
+                      style={{
+                        width: `${paPct}%`,
+                        background: `linear-gradient(to right, ${pa.color}55, ${pa.color}10)`,
+                      }}
+                    />
+                    <button
+                      onClick={() => setCollapsed(c => ({ ...c, [pa.id]: !c[pa.id] }))}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-left relative z-10"
+                    >
+                      <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 cursor-grab active:cursor-grabbing shrink-0" />
+                      <ChevronRight className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${!isCollapsed ? 'rotate-90' : ''}`} />
+                      <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: pa.color }} />
+                      <span className="text-xs md:text-sm font-medium text-foreground flex-1">{pa.nombre}</span>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">{done}/{list.length}</span>
+                    </button>
+                  </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
                   <ContextMenuItem onClick={() => deletePartida(pa.id)} className="text-destructive focus:text-destructive focus:bg-muted">
@@ -215,11 +278,11 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
               </ContextMenu>
 
               {!isCollapsed && (
-                <div className="divide-y divide-border/50">
+                <div>
                   {list.map(plano => (
                     <ContextMenu key={plano.id}>
                       <ContextMenuTrigger asChild>
-                        <div className="flex items-center gap-2 md:gap-3 px-3 py-2 hover:bg-muted/30 transition-colors">
+                        <div className="group flex items-center gap-2 md:gap-3 px-3 py-2 hover:bg-muted/30 transition-colors">
                           <button
                             onClick={() => togglePlano(plano)}
                             className={`w-4 h-4 md:w-5 md:h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
@@ -230,17 +293,53 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                           >
                             {plano.entregado && <Check className="w-2.5 h-2.5 md:w-3 md:h-3 text-status-completed" />}
                           </button>
-                          {plano.codigo && (
-                            <span className={`text-[10px] md:text-[11px] font-mono px-1.5 py-0.5 rounded bg-muted shrink-0 ${plano.entregado ? 'text-muted-foreground/60' : 'text-muted-foreground'}`}>
-                              {plano.codigo}
-                            </span>
+                          {editingPlano === plano.id ? (
+                            <>
+                              <input
+                                autoFocus
+                                value={editCodigo}
+                                onChange={e => setEditCodigo(e.target.value)}
+                                placeholder="Código"
+                                className="w-24 bg-background border border-border rounded px-2 py-1 text-xs font-mono text-foreground focus:outline-none focus:border-primary"
+                              />
+                              <input
+                                value={editNombre}
+                                onChange={e => setEditNombre(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') saveEditPlano(plano.id); if (e.key === 'Escape') setEditingPlano(null); }}
+                                className="flex-1 bg-background border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:border-primary"
+                              />
+                              <button onClick={() => saveEditPlano(plano.id)} className="text-primary hover:text-primary/80 p-1">
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={() => setEditingPlano(null)} className="text-muted-foreground hover:text-foreground p-1">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              {plano.codigo && (
+                                <span className={`text-[10px] md:text-[11px] font-mono px-1.5 py-0.5 rounded bg-muted shrink-0 ${plano.entregado ? 'text-muted-foreground/60' : 'text-muted-foreground'}`}>
+                                  {plano.codigo}
+                                </span>
+                              )}
+                              <span className={`text-xs md:text-sm flex-1 truncate ${plano.entregado ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                                {plano.nombre}
+                              </span>
+                              <button
+                                onClick={() => startEditPlano(plano)}
+                                className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-opacity p-1"
+                                title="Editar plano"
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                            </>
                           )}
-                          <span className={`text-xs md:text-sm flex-1 truncate ${plano.entregado ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
-                            {plano.nombre}
-                          </span>
                         </div>
                       </ContextMenuTrigger>
                       <ContextMenuContent>
+                        <ContextMenuItem onClick={() => startEditPlano(plano)} className="focus:bg-muted">
+                          <Pencil className="w-3.5 h-3.5 mr-2" /> Editar plano
+                        </ContextMenuItem>
                         <ContextMenuItem onClick={() => deletePlano(plano.id)} className="text-destructive focus:text-destructive focus:bg-muted">
                           <Trash2 className="w-3.5 h-3.5 mr-2" /> Eliminar plano
                         </ContextMenuItem>
