@@ -14,6 +14,7 @@ export default function ProjectsPage() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [miembros, setMiembros] = useState<MiembroProyecto[]>([]);
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
+  const [planos, setPlanos] = useState<Array<{ proyecto_id: string; entregado: boolean }>>([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState(PROJECT_COLORS[0]);
@@ -24,16 +25,18 @@ export default function ProjectsPage() {
 
   const fetchData = async () => {
     if (!user) return;
-    const [pRes, tRes, mRes, pfRes] = await Promise.all([
+    const [pRes, tRes, mRes, pfRes, plRes] = await Promise.all([
       supabase.from('proyectos').select('*').order('fecha_creacion', { ascending: false }),
       supabase.from('tareas').select('*'),
       supabase.from('miembros_proyecto').select('*'),
       supabase.from('perfiles').select('*'),
+      supabase.from('planos').select('proyecto_id, entregado'),
     ]);
     if (pRes.data) setProyectos(pRes.data as unknown as Proyecto[]);
     if (tRes.data) setTareas(tRes.data as unknown as Tarea[]);
     if (mRes.data) setMiembros(mRes.data as unknown as MiembroProyecto[]);
     if (pfRes.data) setPerfiles(pfRes.data as unknown as Perfil[]);
+    if (plRes.data) setPlanos(plRes.data as Array<{ proyecto_id: string; entregado: boolean }>);
     setLoading(false);
   };
 
@@ -88,6 +91,14 @@ export default function ProjectsPage() {
       .filter(m => m.proyecto_id === proyectoId)
       .map(m => perfiles.find(p => p.user_id === m.usuario_id))
       .filter(Boolean) as Perfil[];
+  };
+
+  const getSheetsProgress = (proyectoId: string) => {
+    const list = planos.filter(p => p.proyecto_id === proyectoId);
+    const total = list.length;
+    const done = list.filter(p => p.entregado).length;
+    const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+    return { total, done, pct };
   };
 
   if (loading) {
@@ -168,6 +179,7 @@ export default function ProjectsPage() {
           {proyectos.map(p => {
             const counts = getTaskCounts(p.id);
             const members = getProjectMembers(p.id);
+            const sheets = getSheetsProgress(p.id);
             return (
               <button
                 key={p.id}
@@ -198,6 +210,23 @@ export default function ProjectsPage() {
                   {counts.en_progreso > 0 && <span className="text-status-progress">{counts.en_progreso} en progreso</span>}
                   {counts.bloqueada > 0 && <span className="text-status-blocked">{counts.bloqueada} bloqueadas</span>}
                 </div>
+                {sheets.total > 0 && (
+                  <div className="mb-2 md:mb-3 space-y-1">
+                    <div className="flex items-center justify-between text-[10px] md:text-[11px] text-muted-foreground">
+                      <span>Sheets · {sheets.done}/{sheets.total} planos</span>
+                      <span className="tabular-nums text-foreground">{sheets.pct}%</span>
+                    </div>
+                    <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full transition-all duration-500"
+                        style={{
+                          width: `${sheets.pct}%`,
+                          background: `linear-gradient(to right, ${p.color}, ${p.color}80)`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="flex -space-x-1.5">
                   {members.slice(0, 5).map(m => (
                     <UserAvatar key={m.user_id} nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" />
