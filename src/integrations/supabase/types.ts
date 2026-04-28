@@ -157,6 +157,7 @@ export type Database = {
           notas: string | null
           partida_id: string
           proyecto_id: string
+          responsable_id: string | null
         }
         Insert: {
           codigo?: string
@@ -170,6 +171,7 @@ export type Database = {
           notas?: string | null
           partida_id: string
           proyecto_id: string
+          responsable_id?: string | null
         }
         Update: {
           codigo?: string
@@ -183,6 +185,7 @@ export type Database = {
           notas?: string | null
           partida_id?: string
           proyecto_id?: string
+          responsable_id?: string | null
         }
         Relationships: [
           {
