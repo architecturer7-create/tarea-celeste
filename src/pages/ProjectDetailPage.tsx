@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks, GanttChartSquare } from 'lucide-react';
+import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks, CalendarRange } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Proyecto, Tarea, MiembroProyecto, Perfil, EstadoTarea } from '@/lib/types';
@@ -212,7 +212,7 @@ export default function ProjectDetailPage() {
               section === 'timeline' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <GanttChartSquare className="w-3.5 h-3.5" /> Timeline
+            <CalendarRange className="w-3.5 h-3.5" /> Timeline
           </button>
         </div>
 
