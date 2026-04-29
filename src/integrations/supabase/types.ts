@@ -277,6 +277,51 @@ export type Database = {
           },
         ]
       }
+      timeline_partidas: {
+        Row: {
+          color: string
+          creado_por: string
+          fecha_actualizacion: string
+          fecha_creacion: string
+          fecha_fin: string
+          fecha_inicio: string
+          id: string
+          nombre: string
+          orden: number
+          proyecto_id: string
+          responsable_id: string | null
+          seccion: string
+        }
+        Insert: {
+          color?: string
+          creado_por: string
+          fecha_actualizacion?: string
+          fecha_creacion?: string
+          fecha_fin?: string
+          fecha_inicio?: string
+          id?: string
+          nombre: string
+          orden?: number
+          proyecto_id: string
+          responsable_id?: string | null
+          seccion?: string
+        }
+        Update: {
+          color?: string
+          creado_por?: string
+          fecha_actualizacion?: string
+          fecha_creacion?: string
+          fecha_fin?: string
+          fecha_inicio?: string
+          id?: string
+          nombre?: string
+          orden?: number
+          proyecto_id?: string
+          responsable_id?: string | null
+          seccion?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
