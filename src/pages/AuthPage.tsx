@@ -34,8 +34,8 @@ export default function AuthPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-10">
-          <img src={flowemiLogo} alt="Flowemi logo" width={36} height={36} className="w-9 h-9 rounded-lg" />
-          <span className="text-xl font-semibold text-foreground tracking-tight">Flowemi</span>
+          <img src={flowemiLogo} alt="SP Planning logo" width={36} height={36} className="w-9 h-9 rounded-lg" />
+          <span className="text-xl font-semibold text-foreground tracking-tight">SP Planning</span>
         </div>
 
         {/* Form Card */}
