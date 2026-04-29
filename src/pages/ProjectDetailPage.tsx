@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks } from 'lucide-react';
+import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks, GanttChartSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Proyecto, Tarea, MiembroProyecto, Perfil, EstadoTarea } from '@/lib/types';
@@ -11,6 +11,7 @@ import TaskDetailDrawer from '@/components/TaskDetailDrawer';
 import KanbanBoard from '@/components/KanbanBoard';
 import CreateTaskModal from '@/components/CreateTaskModal';
 import SheetsView from '@/components/SheetsView';
+import TimelineView from '@/components/TimelineView';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,7 +25,7 @@ export default function ProjectDetailPage() {
   const [miembros, setMiembros] = useState<MiembroProyecto[]>([]);
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [view, setView] = useState<'list' | 'kanban'>('list');
-  const [section, setSection] = useState<'tareas' | 'sheets'>('tareas');
+  const [section, setSection] = useState<'tareas' | 'sheets' | 'timeline'>('tareas');
   const [selectedTask, setSelectedTask] = useState<Tarea | null>(null);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -205,6 +206,14 @@ export default function ProjectDetailPage() {
           >
             <FileText className="w-3.5 h-3.5" /> Sheets
           </button>
+          <button
+            onClick={() => setSection('timeline')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] md:text-xs transition-colors ${
+              section === 'timeline' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <GanttChartSquare className="w-3.5 h-3.5" /> Timeline
+          </button>
         </div>
 
         {/* Counters and filters */}
@@ -239,6 +248,8 @@ export default function ProjectDetailPage() {
       <div className="flex-1 overflow-hidden relative">
         {section === 'sheets' ? (
           <SheetsView proyectoId={id!} />
+        ) : section === 'timeline' ? (
+          <TimelineView proyectoId={id!} />
         ) : view === 'list' ? (
           <div className="h-full overflow-y-auto p-3 md:p-4">
             {activeTareas.length === 0 && completedTareas.length === 0 ? (
