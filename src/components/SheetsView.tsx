@@ -1,9 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Trash2, Check, ChevronRight, FolderPlus, X, GripVertical, Pencil, UserCircle2 } from 'lucide-react';
+import { Plus, Trash2, Check, ChevronRight, FolderPlus, X, GripVertical, Pencil, UserCircle2, Copy, FolderInput, Users } from 'lucide-react';
 import { toast } from 'sonner';
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
+  ContextMenuSeparator,
+} from '@/components/ui/context-menu';
 import { PROJECT_COLORS } from '@/lib/types';
 import { UserAvatar } from '@/components/UserAvatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -52,6 +61,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
   const [editResponsable, setEditResponsable] = useState<string | null>(null);
   const [dragPartida, setDragPartida] = useState<string | null>(null);
   const [dragOverPartida, setDragOverPartida] = useState<string | null>(null);
+  const [selectedPlanos, setSelectedPlanos] = useState<Set<string>>(new Set());
 
   const fetchData = async () => {
     const [pa, pl, mb] = await Promise.all([
@@ -156,6 +166,80 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
     fetchData();
   };
 
+  const duplicatePlano = async (p: Plano) => {
+    if (!user) return;
+    const { data, error } = await supabase.from('planos').insert({
+      proyecto_id: p.proyecto_id,
+      partida_id: p.partida_id,
+      codigo: p.codigo ? `${p.codigo}-copia` : '',
+      nombre: `${p.nombre} (copia)`,
+      responsable_id: p.responsable_id ?? null,
+      creado_por: user.id,
+    }).select().single();
+    if (error || !data) { toast.error('Error al duplicar'); return; }
+    toast.success('Plano duplicado');
+    await fetchData();
+    // open inline edit on the new copy
+    setEditingPlano((data as Plano).id);
+    setEditCodigo((data as Plano).codigo || '');
+    setEditNombre((data as Plano).nombre);
+    setEditResponsable((data as Plano).responsable_id ?? null);
+  };
+
+  const movePlanoToPartida = async (planoId: string, partidaId: string) => {
+    const { error } = await supabase.from('planos').update({ partida_id: partidaId }).eq('id', planoId);
+    if (error) toast.error('Error al mover');
+    else { toast.success('Plano movido'); fetchData(); }
+  };
+
+  const togglePlanoSelection = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedPlanos(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedPlanos(new Set());
+
+  const bulkAssignResponsable = async (responsableId: string | null) => {
+    if (selectedPlanos.size === 0) return;
+    const ids = Array.from(selectedPlanos);
+    const { error } = await supabase.from('planos').update({ responsable_id: responsableId }).in('id', ids);
+    if (error) toast.error('Error al asignar');
+    else {
+      toast.success(`${ids.length} plano(s) actualizado(s)`);
+      clearSelection();
+      fetchData();
+    }
+  };
+
+  const bulkMoveToPartida = async (partidaId: string) => {
+    if (selectedPlanos.size === 0) return;
+    const ids = Array.from(selectedPlanos);
+    const { error } = await supabase.from('planos').update({ partida_id: partidaId }).in('id', ids);
+    if (error) toast.error('Error al mover');
+    else {
+      toast.success(`${ids.length} plano(s) movido(s)`);
+      clearSelection();
+      fetchData();
+    }
+  };
+
+  const bulkDelete = async () => {
+    if (selectedPlanos.size === 0) return;
+    const ids = Array.from(selectedPlanos);
+    const { error } = await supabase.from('planos').delete().in('id', ids);
+    if (error) toast.error('Error al eliminar');
+    else {
+      toast.success(`${ids.length} plano(s) eliminado(s)`);
+      clearSelection();
+      fetchData();
+    }
+  };
+
   const startEditPlano = (p: Plano) => {
     setEditingPlano(p.id);
     setEditCodigo(p.codigo || '');
@@ -195,6 +279,75 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
 
   return (
     <div className="h-full overflow-y-auto p-3 md:p-4 space-y-4">
+      {/* Bulk actions bar */}
+      {selectedPlanos.size > 0 && (
+        <div className="sticky top-0 z-20 flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/40 bg-primary/10 backdrop-blur">
+          <span className="text-xs font-medium text-foreground">
+            {selectedPlanos.size} seleccionado(s)
+          </span>
+          <div className="flex-1" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-background border border-border hover:bg-muted transition-colors">
+                <Users className="w-3 h-3" /> Asignar responsable
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-1 bg-popover border-border" align="end">
+              <button
+                onClick={() => bulkAssignResponsable(null)}
+                className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted transition-colors text-muted-foreground"
+              >
+                <div className="w-6 h-6 rounded-full border border-dashed border-border flex items-center justify-center">
+                  <X className="w-3 h-3" />
+                </div>
+                Sin asignar
+              </button>
+              {miembros.map(m => (
+                <button
+                  key={m.user_id}
+                  onClick={() => bulkAssignResponsable(m.user_id)}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted transition-colors text-muted-foreground"
+                >
+                  <UserAvatar nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" />
+                  <span className="truncate">{m.nombre}</span>
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-background border border-border hover:bg-muted transition-colors">
+                <FolderInput className="w-3 h-3" /> Mover a partida
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-1 bg-popover border-border" align="end">
+              {partidas.map(pa => (
+                <button
+                  key={pa.id}
+                  onClick={() => bulkMoveToPartida(pa.id)}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs hover:bg-muted transition-colors text-muted-foreground"
+                >
+                  <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: pa.color }} />
+                  <span className="truncate">{pa.nombre}</span>
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+          <button
+            onClick={bulkDelete}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-background border border-border text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <Trash2 className="w-3 h-3" /> Eliminar
+          </button>
+          <button
+            onClick={clearSelection}
+            className="flex items-center gap-1 px-2 py-1 rounded-md text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
       {/* Progreso general */}
       <div className="rounded-lg border border-border bg-card/40 p-4 space-y-3">
         <div className="flex items-center justify-between">
