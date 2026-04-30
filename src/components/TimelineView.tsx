@@ -153,9 +153,24 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
     return diffDays(rangeStart, today) * dayPx;
   }, [rangeStart, dayPx]);
 
+  const weekStartOffset = useMemo(() => {
+    const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+    // Lunes de la semana actual (getUTCDay: 0=Dom..6=Sab)
+    const dow = today.getUTCDay();
+    const diffToMonday = (dow === 0 ? -6 : 1 - dow);
+    const monday = addDays(today, diffToMonday);
+    return diffDays(rangeStart, monday) * dayPx;
+  }, [rangeStart, dayPx]);
+
+  const scrollToCurrentWeek = useCallback(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = Math.max(0, weekStartOffset - 40);
+    }
+  }, [weekStartOffset]);
+
   useEffect(() => {
     if (!loading && scrollRef.current) {
-      scrollRef.current.scrollLeft = Math.max(0, todayOffset - 200);
+      scrollRef.current.scrollLeft = Math.max(0, weekStartOffset - 40);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, zoom]);
@@ -268,8 +283,38 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
     if (scrollRef.current) scrollRef.current.scrollLeft += n * dayPx;
   };
   const goToToday = () => {
-    if (scrollRef.current) scrollRef.current.scrollLeft = Math.max(0, todayOffset - 200);
+    scrollToCurrentWeek();
   };
+
+  // --- Pan con click izquierdo sobre el fondo ---
+  const panRef = useRef<{ startX: number; startScroll: number } | null>(null);
+  const onPanStart = (e: React.MouseEvent) => {
+    // Solo botón izquierdo y solo si no estamos sobre una barra (las barras paran propagación con stopPropagation en mousedown)
+    if (e.button !== 0) return;
+    if (!scrollRef.current) return;
+    panRef.current = { startX: e.clientX, startScroll: scrollRef.current.scrollLeft };
+    document.body.style.cursor = 'grabbing';
+    document.body.style.userSelect = 'none';
+  };
+  const onPanMove = useCallback((e: MouseEvent) => {
+    const pan = panRef.current;
+    if (!pan || !scrollRef.current) return;
+    scrollRef.current.scrollLeft = pan.startScroll - (e.clientX - pan.startX);
+  }, []);
+  const onPanEnd = useCallback(() => {
+    if (!panRef.current) return;
+    panRef.current = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, []);
+  useEffect(() => {
+    window.addEventListener('mousemove', onPanMove);
+    window.addEventListener('mouseup', onPanEnd);
+    return () => {
+      window.removeEventListener('mousemove', onPanMove);
+      window.removeEventListener('mouseup', onPanEnd);
+    };
+  }, [onPanMove, onPanEnd]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-full"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
@@ -371,6 +416,8 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
             const side = document.getElementById('timeline-side-scroll');
             if (side) side.scrollTop = (e.target as HTMLDivElement).scrollTop;
           }}
+          onMouseDown={onPanStart}
+          style={{ cursor: panRef.current ? 'grabbing' : 'grab' }}
         >
           <div style={{ width: totalWidth, position: 'relative' }}>
             {/* Header */}
