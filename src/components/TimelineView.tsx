@@ -293,7 +293,7 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
     if (e.button !== 0) return;
     if (!scrollRef.current) return;
     panRef.current = { startX: e.clientX, startScroll: scrollRef.current.scrollLeft };
-    document.body.style.cursor = 'grabbing';
+    document.body.style.cursor = 'ew-resize';
     document.body.style.userSelect = 'none';
   };
   const onPanMove = useCallback((e: MouseEvent) => {
