@@ -417,7 +417,7 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
             if (side) side.scrollTop = (e.target as HTMLDivElement).scrollTop;
           }}
           onMouseDown={onPanStart}
-          style={{ cursor: panRef.current ? 'grabbing' : 'grab' }}
+          style={{ cursor: 'ew-resize' }}
         >
           <div style={{ width: totalWidth, position: 'relative' }}>
             {/* Header */}
