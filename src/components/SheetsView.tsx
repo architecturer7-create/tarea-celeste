@@ -468,9 +468,21 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                   {list.map(plano => (
                     <ContextMenu key={plano.id}>
                       <ContextMenuTrigger asChild>
-                        <div className="group flex items-center gap-2 md:gap-3 px-3 py-2 hover:bg-muted/30 transition-colors">
+                        <div
+                          onClick={(e) => {
+                            // Cmd/Ctrl/Shift click toggles multi-select
+                            if (e.metaKey || e.ctrlKey || e.shiftKey) {
+                              togglePlanoSelection(plano.id, e);
+                            }
+                          }}
+                          className={`group flex items-center gap-2 md:gap-3 px-3 py-2 transition-colors ${
+                            selectedPlanos.has(plano.id)
+                              ? 'bg-primary/15 hover:bg-primary/20'
+                              : 'hover:bg-muted/30'
+                          }`}
+                        >
                           <button
-                            onClick={() => togglePlano(plano)}
+                            onClick={(e) => { e.stopPropagation(); togglePlano(plano); }}
                             className={`w-4 h-4 md:w-5 md:h-5 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
                               plano.entregado
                                 ? 'border-status-completed bg-status-completed/20'
@@ -542,12 +554,80 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                         </div>
                       </ContextMenuTrigger>
                       <ContextMenuContent>
+                        {selectedPlanos.size > 1 && selectedPlanos.has(plano.id) ? (
+                          <>
+                            <ContextMenuSub>
+                              <ContextMenuSubTrigger className="focus:bg-muted">
+                                <Users className="w-3.5 h-3.5 mr-2" /> Asignar responsable ({selectedPlanos.size})
+                              </ContextMenuSubTrigger>
+                              <ContextMenuSubContent>
+                                <ContextMenuItem onClick={() => bulkAssignResponsable(null)} className="focus:bg-muted">
+                                  <div className="w-4 h-4 rounded-full border border-dashed border-border mr-2" />
+                                  Sin asignar
+                                </ContextMenuItem>
+                                {miembros.map(m => (
+                                  <ContextMenuItem key={m.user_id} onClick={() => bulkAssignResponsable(m.user_id)} className="focus:bg-muted">
+                                    <UserAvatar nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" className="mr-2" />
+                                    <span className="truncate">{m.nombre}</span>
+                                  </ContextMenuItem>
+                                ))}
+                              </ContextMenuSubContent>
+                            </ContextMenuSub>
+                            <ContextMenuSub>
+                              <ContextMenuSubTrigger className="focus:bg-muted">
+                                <FolderInput className="w-3.5 h-3.5 mr-2" /> Mover a partida ({selectedPlanos.size})
+                              </ContextMenuSubTrigger>
+                              <ContextMenuSubContent>
+                                {partidas.map(pa2 => (
+                                  <ContextMenuItem key={pa2.id} onClick={() => bulkMoveToPartida(pa2.id)} className="focus:bg-muted">
+                                    <span className="w-2 h-2 rounded-sm mr-2" style={{ backgroundColor: pa2.color }} />
+                                    <span className="truncate">{pa2.nombre}</span>
+                                  </ContextMenuItem>
+                                ))}
+                              </ContextMenuSubContent>
+                            </ContextMenuSub>
+                            <ContextMenuSeparator />
+                            <ContextMenuItem onClick={bulkDelete} className="text-destructive focus:text-destructive focus:bg-muted">
+                              <Trash2 className="w-3.5 h-3.5 mr-2" /> Eliminar ({selectedPlanos.size})
+                            </ContextMenuItem>
+                          </>
+                        ) : (
+                          <>
                         <ContextMenuItem onClick={() => startEditPlano(plano)} className="focus:bg-muted">
                           <Pencil className="w-3.5 h-3.5 mr-2" /> Editar plano
                         </ContextMenuItem>
+                        <ContextMenuItem onClick={() => duplicatePlano(plano)} className="focus:bg-muted">
+                          <Copy className="w-3.5 h-3.5 mr-2" /> Duplicar plano
+                        </ContextMenuItem>
+                        <ContextMenuSub>
+                          <ContextMenuSubTrigger className="focus:bg-muted">
+                            <FolderInput className="w-3.5 h-3.5 mr-2" /> Mover a partida
+                          </ContextMenuSubTrigger>
+                          <ContextMenuSubContent>
+                            {partidas.filter(pa2 => pa2.id !== plano.partida_id).map(pa2 => (
+                              <ContextMenuItem key={pa2.id} onClick={() => movePlanoToPartida(plano.id, pa2.id)} className="focus:bg-muted">
+                                <span className="w-2 h-2 rounded-sm mr-2" style={{ backgroundColor: pa2.color }} />
+                                <span className="truncate">{pa2.nombre}</span>
+                              </ContextMenuItem>
+                            ))}
+                            {partidas.filter(pa2 => pa2.id !== plano.partida_id).length === 0 && (
+                              <div className="px-2 py-1.5 text-xs text-muted-foreground">No hay otras partidas</div>
+                            )}
+                          </ContextMenuSubContent>
+                        </ContextMenuSub>
+                        <ContextMenuItem
+                          onClick={(e) => { togglePlanoSelection(plano.id, e as any); }}
+                          className="focus:bg-muted"
+                        >
+                          <Check className="w-3.5 h-3.5 mr-2" />
+                          {selectedPlanos.has(plano.id) ? 'Quitar de selección' : 'Seleccionar'}
+                        </ContextMenuItem>
+                        <ContextMenuSeparator />
                         <ContextMenuItem onClick={() => deletePlano(plano.id)} className="text-destructive focus:text-destructive focus:bg-muted">
                           <Trash2 className="w-3.5 h-3.5 mr-2" /> Eliminar plano
                         </ContextMenuItem>
+                          </>
+                        )}
                       </ContextMenuContent>
                     </ContextMenu>
                   ))}
