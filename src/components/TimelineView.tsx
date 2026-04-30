@@ -1,22 +1,24 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Trash2, ZoomIn, ZoomOut, Pencil, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { UserAvatar } from '@/components/UserAvatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
-interface TimelinePartida {
+interface Partida {
   id: string;
-  proyecto_id: string;
   nombre: string;
-  seccion: string;
+  color: string;
+  orden: number;
+}
+
+interface TimelineRow {
+  id: string;
+  partida_id: string;
   fecha_inicio: string;
   fecha_fin: string;
   responsable_id: string | null;
-  color: string;
-  orden: number;
 }
 
 interface MiembroPerfil {
@@ -27,14 +29,8 @@ interface MiembroPerfil {
 }
 
 type Zoom = 'dia' | 'semana' | 'mes';
+const ZOOM_PX: Record<Zoom, number> = { dia: 32, semana: 12, mes: 4 };
 
-const ZOOM_PX: Record<Zoom, number> = {
-  dia: 32,
-  semana: 12,
-  mes: 4,
-};
-
-// --- date helpers (UTC, day-precision) ---
 const DAY_MS = 24 * 60 * 60 * 1000;
 const toDate = (s: string) => {
   const [y, m, d] = s.split('-').map(Number);
@@ -49,35 +45,47 @@ const toISODate = (d: Date) => {
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * DAY_MS);
 const diffDays = (a: Date, b: Date) => Math.round((b.getTime() - a.getTime()) / DAY_MS);
 const startOfMonth = (d: Date) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
-
 const MES_ABR = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
-
-const SECCIONES_DEFAULT = ['Anteproyecto', 'Proyecto Ejecutivo', 'Planos Constructivos', 'Coordinación', 'Ingenierías', 'General'];
 
 export default function TimelineView({ proyectoId }: { proyectoId: string }) {
   const { user } = useAuth();
-  const [items, setItems] = useState<TimelinePartida[]>([]);
+  const [partidas, setPartidas] = useState<Partida[]>([]);
+  const [rows, setRows] = useState<TimelineRow[]>([]);
   const [miembros, setMiembros] = useState<MiembroPerfil[]>([]);
   const [loading, setLoading] = useState(true);
   const [zoom, setZoom] = useState<Zoom>('dia');
-  const [showNew, setShowNew] = useState(false);
-  const [editing, setEditing] = useState<TimelinePartida | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // form state
-  const [fNombre, setFNombre] = useState('');
-  const [fSeccion, setFSeccion] = useState('General');
-  const [fSeccionCustom, setFSeccionCustom] = useState('');
-  const [fInicio, setFInicio] = useState(toISODate(new Date()));
-  const [fFin, setFFin] = useState(toISODate(addDays(new Date(), 7)));
-  const [fResp, setFResp] = useState<string | null>(null);
-
-  const fetchData = async () => {
-    const [it, mb] = await Promise.all([
-      supabase.from('timeline_partidas').select('*').eq('proyecto_id', proyectoId).order('orden'),
+  const fetchAll = useCallback(async () => {
+    const [pa, ti, mb] = await Promise.all([
+      supabase.from('partidas_planos').select('id, nombre, color, orden').eq('proyecto_id', proyectoId).order('orden'),
+      supabase.from('timeline_partidas').select('id, partida_id, fecha_inicio, fecha_fin, responsable_id').eq('proyecto_id', proyectoId),
       supabase.from('miembros_proyecto').select('usuario_id').eq('proyecto_id', proyectoId),
     ]);
-    if (it.data) setItems(it.data as TimelinePartida[]);
+    const partidasData = (pa.data || []) as Partida[];
+    const rowsData = (ti.data || []) as TimelineRow[];
+    setPartidas(partidasData);
+
+    // Auto-create missing rows for existing partidas
+    const existingIds = new Set(rowsData.map(r => r.partida_id));
+    const missing = partidasData.filter(p => !existingIds.has(p.id));
+    if (missing.length > 0 && user) {
+      const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+      const inserts = missing.map(p => ({
+        proyecto_id: proyectoId,
+        partida_id: p.id,
+        fecha_inicio: toISODate(today),
+        fecha_fin: toISODate(addDays(today, 7)),
+        responsable_id: null,
+        creado_por: user.id,
+      }));
+      const { data: inserted } = await supabase.from('timeline_partidas').insert(inserts).select('id, partida_id, fecha_inicio, fecha_fin, responsable_id');
+      setRows([...rowsData, ...((inserted || []) as TimelineRow[])]);
+    } else {
+      setRows(rowsData);
+    }
+
     if (mb.data && mb.data.length > 0) {
       const ids = mb.data.map((m: any) => m.usuario_id);
       const { data: pf } = await supabase
@@ -89,21 +97,41 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
       setMiembros([]);
     }
     setLoading(false);
-  };
+  }, [proyectoId, user]);
 
-  useEffect(() => { fetchData(); }, [proyectoId]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  // Realtime: refresh when partidas o timeline cambian
   useEffect(() => {
     const ch = supabase.channel(`timeline-${proyectoId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'timeline_partidas', filter: `proyecto_id=eq.${proyectoId}` }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'timeline_partidas', filter: `proyecto_id=eq.${proyectoId}` }, () => fetchAll())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'partidas_planos', filter: `proyecto_id=eq.${proyectoId}` }, () => fetchAll())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [proyectoId]);
+  }, [proyectoId, fetchAll]);
 
-  // Compute timeline range: from earliest start - 14 days to latest end + 30 days, with sane defaults
+  // Build display items joining partidas with rows
+  const items = useMemo(() => {
+    const rowMap = new Map(rows.map(r => [r.partida_id, r]));
+    return partidas
+      .map(p => {
+        const r = rowMap.get(p.id);
+        if (!r) return null;
+        return {
+          rowId: r.id,
+          partidaId: p.id,
+          nombre: p.nombre,
+          partidaColor: p.color,
+          fecha_inicio: r.fecha_inicio,
+          fecha_fin: r.fecha_fin,
+          responsable_id: r.responsable_id,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+  }, [partidas, rows]);
+
   const { rangeStart, rangeEnd, totalDays } = useMemo(() => {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+    const today = new Date(); today.setUTCHours(0, 0, 0, 0);
     let min = addDays(today, -7);
     let max = addDays(today, 60);
     items.forEach(i => {
@@ -120,25 +148,11 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
   const dayPx = ZOOM_PX[zoom];
   const totalWidth = totalDays * dayPx;
 
-  // Group by seccion preserving order of first appearance, plus default order
-  const grouped = useMemo(() => {
-    const map = new Map<string, TimelinePartida[]>();
-    items.forEach(i => {
-      const sec = i.seccion || 'General';
-      if (!map.has(sec)) map.set(sec, []);
-      map.get(sec)!.push(i);
-    });
-    return Array.from(map.entries());
-  }, [items]);
-
-  // Today line position
   const todayOffset = useMemo(() => {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+    const today = new Date(); today.setUTCHours(0, 0, 0, 0);
     return diffDays(rangeStart, today) * dayPx;
   }, [rangeStart, dayPx]);
 
-  // Auto-scroll to today on mount
   useEffect(() => {
     if (!loading && scrollRef.current) {
       scrollRef.current.scrollLeft = Math.max(0, todayOffset - 200);
@@ -146,7 +160,6 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, zoom]);
 
-  // Header rows: months and days
   const headerRows = useMemo(() => {
     const months: { label: string; offset: number; width: number }[] = [];
     const days: { label: string; offset: number; isWeekend: boolean; isToday: boolean; isFirst: boolean }[] = [];
@@ -177,18 +190,18 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
 
   // --- Drag/Resize ---
   const dragRef = useRef<{
-    id: string;
+    rowId: string;
     mode: 'move' | 'resize-l' | 'resize-r';
     startX: number;
     origStart: Date;
     origEnd: Date;
   } | null>(null);
 
-  const onMouseDownBar = (e: React.MouseEvent, item: TimelinePartida, mode: 'move' | 'resize-l' | 'resize-r') => {
+  const onMouseDownBar = (e: React.MouseEvent, item: { rowId: string; fecha_inicio: string; fecha_fin: string }, mode: 'move' | 'resize-l' | 'resize-r') => {
     e.preventDefault();
     e.stopPropagation();
     dragRef.current = {
-      id: item.id,
+      rowId: item.rowId,
       mode,
       startX: e.clientX,
       origStart: toDate(item.fecha_inicio),
@@ -203,8 +216,8 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
     if (!drag) return;
     const deltaPx = e.clientX - drag.startX;
     const deltaDays = Math.round(deltaPx / dayPx);
-    setItems(prev => prev.map(it => {
-      if (it.id !== drag.id) return it;
+    setRows(prev => prev.map(r => {
+      if (r.id !== drag.rowId) return r;
       let s = drag.origStart, en = drag.origEnd;
       if (drag.mode === 'move') {
         s = addDays(drag.origStart, deltaDays);
@@ -216,7 +229,7 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
         en = addDays(drag.origEnd, deltaDays);
         if (en <= s) en = addDays(s, 1);
       }
-      return { ...it, fecha_inicio: toISODate(s), fecha_fin: toISODate(en) };
+      return { ...r, fecha_inicio: toISODate(s), fecha_fin: toISODate(en) };
     }));
   }, [dayPx]);
 
@@ -225,16 +238,16 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
     if (!drag) return;
-    const item = items.find(i => i.id === drag.id);
+    const row = rows.find(r => r.id === drag.rowId);
     dragRef.current = null;
-    if (!item) return;
-    if (item.fecha_inicio === toISODate(drag.origStart) && item.fecha_fin === toISODate(drag.origEnd)) return;
+    if (!row) return;
+    if (row.fecha_inicio === toISODate(drag.origStart) && row.fecha_fin === toISODate(drag.origEnd)) return;
     const { error } = await supabase
       .from('timeline_partidas')
-      .update({ fecha_inicio: item.fecha_inicio, fecha_fin: item.fecha_fin })
-      .eq('id', drag.id);
+      .update({ fecha_inicio: row.fecha_inicio, fecha_fin: row.fecha_fin })
+      .eq('id', drag.rowId);
     if (error) toast.error('No se pudo actualizar');
-  }, [items]);
+  }, [rows]);
 
   useEffect(() => {
     window.addEventListener('mousemove', onMouseMove);
@@ -245,92 +258,15 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
     };
   }, [onMouseMove, onMouseUp]);
 
-  // --- CRUD ---
-  const resetForm = () => {
-    setFNombre('');
-    setFSeccion('General');
-    setFSeccionCustom('');
-    const t = new Date(); t.setUTCHours(0, 0, 0, 0);
-    setFInicio(toISODate(t));
-    setFFin(toISODate(addDays(t, 7)));
-    setFResp(null);
-  };
-
-  const openCreate = () => {
-    resetForm();
-    setEditing(null);
-    setShowNew(true);
-  };
-
-  const openEdit = (item: TimelinePartida) => {
-    setEditing(item);
-    setFNombre(item.nombre);
-    if (SECCIONES_DEFAULT.includes(item.seccion)) {
-      setFSeccion(item.seccion);
-      setFSeccionCustom('');
-    } else {
-      setFSeccion('__custom__');
-      setFSeccionCustom(item.seccion);
-    }
-    setFInicio(item.fecha_inicio);
-    setFFin(item.fecha_fin);
-    setFResp(item.responsable_id);
-    setShowNew(true);
-  };
-
-  const handleSave = async () => {
-    if (!fNombre.trim() || !user) return;
-    const seccionFinal = fSeccion === '__custom__' ? (fSeccionCustom.trim() || 'General') : fSeccion;
-    const responsable = miembros.find(m => m.user_id === fResp);
-    const color = responsable?.color_avatar || '#6366F1';
-    if (editing) {
-      const { error } = await supabase
-        .from('timeline_partidas')
-        .update({
-          nombre: fNombre.trim(),
-          seccion: seccionFinal,
-          fecha_inicio: fInicio,
-          fecha_fin: fFin,
-          responsable_id: fResp,
-          color,
-        })
-        .eq('id', editing.id);
-      if (error) { toast.error('Error al guardar'); return; }
-      toast.success('Partida actualizada');
-    } else {
-      const maxOrden = items.reduce((m, i) => Math.max(m, i.orden), -1);
-      const { error } = await supabase
-        .from('timeline_partidas')
-        .insert({
-          proyecto_id: proyectoId,
-          nombre: fNombre.trim(),
-          seccion: seccionFinal,
-          fecha_inicio: fInicio,
-          fecha_fin: fFin,
-          responsable_id: fResp,
-          color,
-          orden: maxOrden + 1,
-          creado_por: user.id,
-        });
-      if (error) { toast.error('Error al crear'); return; }
-      toast.success('Partida creada');
-    }
-    setShowNew(false);
-    setEditing(null);
-    fetchData();
-  };
-
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from('timeline_partidas').delete().eq('id', id);
-    if (error) { toast.error('Error al eliminar'); return; }
-    toast.success('Partida eliminada');
-    fetchData();
+  const updateResponsable = async (rowId: string, userId: string | null) => {
+    setRows(prev => prev.map(r => r.id === rowId ? { ...r, responsable_id: userId } : r));
+    const { error } = await supabase.from('timeline_partidas').update({ responsable_id: userId }).eq('id', rowId);
+    if (error) toast.error('Error al asignar responsable');
   };
 
   const scrollByDays = (n: number) => {
     if (scrollRef.current) scrollRef.current.scrollLeft += n * dayPx;
   };
-
   const goToToday = () => {
     if (scrollRef.current) scrollRef.current.scrollLeft = Math.max(0, todayOffset - 200);
   };
@@ -340,7 +276,6 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
   }
 
   const ROW_H = 36;
-  const SECTION_H = 28;
   const SIDE_W = 240;
 
   return (
@@ -366,12 +301,6 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
               </button>
             ))}
           </div>
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-1 h-7 px-2.5 rounded-md bg-primary text-primary-foreground text-[11px] font-medium hover:opacity-90 transition-opacity"
-          >
-            <Plus className="w-3 h-3" /> Partida
-          </button>
         </div>
       </div>
 
@@ -383,51 +312,54 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
             <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Partida</span>
           </div>
           <div className="overflow-y-auto" style={{ height: 'calc(100% - 52px)' }} id="timeline-side-scroll">
-            {grouped.length === 0 && (
+            {items.length === 0 && (
               <div className="p-6 text-center text-muted-foreground text-xs">
-                Sin partidas. Crea la primera con el botón "+ Partida".
+                No hay partidas. Crea partidas en la pestaña Sheets para verlas aquí.
               </div>
             )}
-            {grouped.map(([seccion, list]) => (
-              <div key={seccion}>
+            {items.map(item => {
+              const responsable = miembros.find(m => m.user_id === item.responsable_id);
+              return (
                 <div
-                  className="px-3 flex items-center text-[10px] font-medium text-muted-foreground/80 uppercase tracking-widest"
-                  style={{ height: SECTION_H }}
+                  key={item.rowId}
+                  className="px-3 flex items-center gap-2 hover:bg-muted/30 group"
+                  style={{ height: ROW_H }}
                 >
-                  {seccion}
-                </div>
-                {list.map(item => {
-                  const responsable = miembros.find(m => m.user_id === item.responsable_id);
-                  return (
-                    <ContextMenu key={item.id}>
-                      <ContextMenuTrigger asChild>
-                        <div
-                          className="px-3 flex items-center gap-2 hover:bg-muted/30 cursor-pointer group"
-                          style={{ height: ROW_H }}
-                          onClick={() => openEdit(item)}
+                  <div className="w-1.5 h-5 rounded-sm shrink-0" style={{ background: item.partidaColor }} />
+                  <span className="text-xs text-foreground truncate flex-1">{item.nombre}</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="shrink-0">
+                        {responsable ? (
+                          <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} avatarUrl={responsable.avatar_url} size="sm" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full border border-dashed border-border hover:border-foreground/40 transition-colors" />
+                        )}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-1 bg-popover border border-border" align="end">
+                      <button
+                        onClick={() => updateResponsable(item.rowId, null)}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-muted-foreground hover:bg-muted"
+                      >
+                        <div className="w-6 h-6 rounded-full border border-dashed border-border" />
+                        Sin asignar
+                      </button>
+                      {miembros.map(m => (
+                        <button
+                          key={m.user_id}
+                          onClick={() => updateResponsable(item.rowId, m.user_id)}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-foreground hover:bg-muted"
                         >
-                          {responsable ? (
-                            <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} avatarUrl={responsable.avatar_url} size="sm" />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full border border-dashed border-border" />
-                          )}
-                          <span className="text-xs text-foreground truncate flex-1">{item.nombre}</span>
-                          <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                      </ContextMenuTrigger>
-                      <ContextMenuContent>
-                        <ContextMenuItem onClick={() => openEdit(item)}>
-                          <Pencil className="w-3.5 h-3.5 mr-2" /> Editar
-                        </ContextMenuItem>
-                        <ContextMenuItem onClick={() => handleDelete(item.id)} className="text-destructive focus:text-destructive">
-                          <Trash2 className="w-3.5 h-3.5 mr-2" /> Eliminar
-                        </ContextMenuItem>
-                      </ContextMenuContent>
-                    </ContextMenu>
-                  );
-                })}
-              </div>
-            ))}
+                          <UserAvatar nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" />
+                          {m.nombre}
+                        </button>
+                      ))}
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -443,7 +375,6 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
           <div style={{ width: totalWidth, position: 'relative' }}>
             {/* Header */}
             <div className="sticky top-0 z-20 bg-background border-b border-border" style={{ height: 52 }}>
-              {/* Months row */}
               <div className="relative" style={{ height: 24 }}>
                 {headerRows.months.map((m, i) => (
                   <div
@@ -455,7 +386,6 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
                   </div>
                 ))}
               </div>
-              {/* Days row */}
               <div className="relative" style={{ height: 28 }}>
                 {headerRows.days.map((d, i) => (
                   <div
@@ -471,9 +401,8 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
               </div>
             </div>
 
-            {/* Grid background + bars */}
+            {/* Grid + bars */}
             <div className="relative">
-              {/* vertical day lines */}
               <div className="absolute inset-0 pointer-events-none">
                 {headerRows.days.map((d, i) => (
                   <div
@@ -486,7 +415,6 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
                 ))}
               </div>
 
-              {/* Today line */}
               {todayOffset >= 0 && todayOffset <= totalWidth && (
                 <div
                   className="absolute top-0 bottom-0 w-px bg-primary/70 pointer-events-none z-10"
@@ -496,168 +424,48 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
                 </div>
               )}
 
-              {/* Rows */}
-              {grouped.map(([seccion, list]) => (
-                <div key={seccion}>
-                  <div className="relative bg-muted/10" style={{ height: SECTION_H }} />
-                  {list.map(item => {
-                    const start = toDate(item.fecha_inicio);
-                    const end = toDate(item.fecha_fin);
-                    const offset = diffDays(rangeStart, start) * dayPx;
-                    const width = Math.max(dayPx, (diffDays(start, end) + 1) * dayPx);
-                    return (
-                      <div key={item.id} className="relative" style={{ height: ROW_H }}>
-                        <div
-                          className="absolute top-1/2 -translate-y-1/2 rounded-md flex items-center px-2 group select-none"
-                          style={{
-                            left: offset,
-                            width,
-                            height: 22,
-                            background: `linear-gradient(90deg, ${item.color}EE, ${item.color}99)`,
-                            boxShadow: `0 0 0 1px ${item.color}40, 0 2px 8px ${item.color}30`,
-                            cursor: 'grab',
-                          }}
-                          onMouseDown={(e) => onMouseDownBar(e, item, 'move')}
-                          onDoubleClick={() => openEdit(item)}
-                          title={`${item.nombre} · ${item.fecha_inicio} → ${item.fecha_fin}`}
-                        >
-                          {/* Left handle */}
-                          <div
-                            className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-foreground/20 rounded-l-md"
-                            onMouseDown={(e) => onMouseDownBar(e, item, 'resize-l')}
-                          />
-                          {/* Right handle */}
-                          <div
-                            className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-foreground/20 rounded-r-md"
-                            onMouseDown={(e) => onMouseDownBar(e, item, 'resize-r')}
-                          />
-                          <div className="w-1.5 h-1.5 rounded-full bg-white/90 shrink-0 mr-1.5" />
-                          <span className="text-[11px] font-medium text-white truncate pointer-events-none">
-                            {item.nombre}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+              {items.map(item => {
+                const start = toDate(item.fecha_inicio);
+                const end = toDate(item.fecha_fin);
+                const offset = diffDays(rangeStart, start) * dayPx;
+                const width = Math.max(dayPx, (diffDays(start, end) + 1) * dayPx);
+                const responsable = miembros.find(m => m.user_id === item.responsable_id);
+                const barColor = responsable?.color_avatar || item.partidaColor;
+                return (
+                  <div key={item.rowId} className="relative" style={{ height: ROW_H }}>
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 rounded-md flex items-center px-2 group select-none"
+                      style={{
+                        left: offset,
+                        width,
+                        height: 22,
+                        background: `linear-gradient(90deg, ${barColor}EE, ${barColor}99)`,
+                        boxShadow: `0 0 0 1px ${barColor}40, 0 2px 8px ${barColor}30`,
+                        cursor: 'grab',
+                      }}
+                      onMouseDown={(e) => onMouseDownBar(e, item, 'move')}
+                      title={`${item.nombre} · ${item.fecha_inicio} → ${item.fecha_fin}`}
+                    >
+                      <div
+                        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-foreground/20 rounded-l-md"
+                        onMouseDown={(e) => onMouseDownBar(e, item, 'resize-l')}
+                      />
+                      <div
+                        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-foreground/20 rounded-r-md"
+                        onMouseDown={(e) => onMouseDownBar(e, item, 'resize-r')}
+                      />
+                      <div className="w-1.5 h-1.5 rounded-full bg-white/90 shrink-0 mr-1.5" />
+                      <span className="text-[11px] font-medium text-white truncate pointer-events-none">
+                        {item.nombre}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
       </div>
-
-      {/* Create / Edit modal */}
-      {showNew && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4" onClick={() => setShowNew(false)}>
-          <div className="glass-panel rounded-lg p-5 w-full max-w-md animate-fade-in" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-medium text-foreground">{editing ? 'Editar partida' : 'Nueva partida'}</h3>
-              <button onClick={() => setShowNew(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Nombre</label>
-                <input
-                  value={fNombre}
-                  onChange={e => setFNombre(e.target.value)}
-                  autoFocus
-                  className="mt-1 w-full h-9 px-3 rounded-md bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  placeholder="Planos Carpintería"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Sección</label>
-                <select
-                  value={fSeccion}
-                  onChange={e => setFSeccion(e.target.value)}
-                  className="mt-1 w-full h-9 px-3 rounded-md bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  {SECCIONES_DEFAULT.map(s => <option key={s} value={s}>{s}</option>)}
-                  <option value="__custom__">+ Otra…</option>
-                </select>
-                {fSeccion === '__custom__' && (
-                  <input
-                    value={fSeccionCustom}
-                    onChange={e => setFSeccionCustom(e.target.value)}
-                    className="mt-2 w-full h-9 px-3 rounded-md bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    placeholder="Nombre de la sección"
-                  />
-                )}
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Inicio</label>
-                  <input
-                    type="date"
-                    value={fInicio}
-                    onChange={e => setFInicio(e.target.value)}
-                    className="mt-1 w-full h-9 px-3 rounded-md bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Fin</label>
-                  <input
-                    type="date"
-                    value={fFin}
-                    onChange={e => setFFin(e.target.value)}
-                    className="mt-1 w-full h-9 px-3 rounded-md bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Responsable</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button className="mt-1 w-full h-9 px-3 rounded-md bg-muted border border-border text-sm text-foreground flex items-center gap-2 hover:bg-muted/70 transition-colors">
-                      {(() => {
-                        const r = miembros.find(m => m.user_id === fResp);
-                        return r ? (
-                          <>
-                            <UserAvatar nombre={r.nombre} color={r.color_avatar} avatarUrl={r.avatar_url} size="sm" />
-                            <span>{r.nombre}</span>
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">Sin asignar</span>
-                        );
-                      })()}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-1 bg-popover border border-border" align="start">
-                    <button
-                      onClick={() => setFResp(null)}
-                      className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-muted-foreground hover:bg-muted"
-                    >
-                      <div className="w-6 h-6 rounded-full border border-dashed border-border" />
-                      Sin asignar
-                    </button>
-                    {miembros.map(m => (
-                      <button
-                        key={m.user_id}
-                        onClick={() => setFResp(m.user_id)}
-                        className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm text-foreground hover:bg-muted"
-                      >
-                        <UserAvatar nombre={m.nombre} color={m.color_avatar} avatarUrl={m.avatar_url} size="sm" />
-                        {m.nombre}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                {editing && (
-                  <button onClick={() => { handleDelete(editing.id); setShowNew(false); }} className="h-9 px-3 rounded-md text-sm text-destructive hover:bg-destructive/10 transition-colors mr-auto">
-                    Eliminar
-                  </button>
-                )}
-                <button onClick={() => setShowNew(false)} className="h-9 px-4 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
-                <button onClick={handleSave} className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
-                  {editing ? 'Guardar' : 'Crear'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
