@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Plus, Trash2, Check, ChevronRight, FolderPlus, X, GripVertical, Pencil, UserCircle2, Copy, FolderInput, Users, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
@@ -65,6 +65,17 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
   // Override global independiente del estado individual de cada partida.
   // null = sin override (respeta `collapsed`), true = todas colapsadas, false = todas expandidas
   const [collapseAllOverride, setCollapseAllOverride] = useState<null | boolean>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showFloatingCollapse, setShowFloatingCollapse] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => setShowFloatingCollapse(el.scrollTop > 120);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [loading]);
 
   const fetchData = async () => {
     const [pa, pl, mb] = await Promise.all([
@@ -281,7 +292,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-3 md:p-4 space-y-4">
+    <div ref={scrollRef} className="relative h-full overflow-y-auto p-3 md:p-4 space-y-4">
       {/* Bulk actions bar */}
       {selectedPlanos.size > 0 && (
         <div className="sticky top-0 z-20 flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/40 bg-primary/10 backdrop-blur">
@@ -365,16 +376,13 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
               <button
                 onClick={() => setCollapseAllOverride(prev => prev === true ? null : true)}
                 title={collapseAllOverride === true ? 'Restaurar vista previa' : 'Colapsar todas las partidas'}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                aria-label={collapseAllOverride === true ? 'Restaurar vista previa' : 'Colapsar todas las partidas'}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
               >
                 {collapseAllOverride === true ? (
-                  <>
-                    <ChevronsUpDown className="w-3.5 h-3.5" /> Restaurar
-                  </>
+                  <ChevronsUpDown className="w-3.5 h-3.5" />
                 ) : (
-                  <>
-                    <ChevronsDownUp className="w-3.5 h-3.5" /> Colapsar todas
-                  </>
+                  <ChevronsDownUp className="w-3.5 h-3.5" />
                 )}
               </button>
             )}
