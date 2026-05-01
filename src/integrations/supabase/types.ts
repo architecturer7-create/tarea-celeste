@@ -197,6 +197,33 @@ export type Database = {
           },
         ]
       }
+      proyecto_miro: {
+        Row: {
+          actualizado_por: string
+          fecha_actualizacion: string
+          id: string
+          miro_board_id: string
+          miro_url: string
+          proyecto_id: string
+        }
+        Insert: {
+          actualizado_por: string
+          fecha_actualizacion?: string
+          id?: string
+          miro_board_id: string
+          miro_url: string
+          proyecto_id: string
+        }
+        Update: {
+          actualizado_por?: string
+          fecha_actualizacion?: string
+          id?: string
+          miro_board_id?: string
+          miro_url?: string
+          proyecto_id?: string
+        }
+        Relationships: []
+      }
       proyectos: {
         Row: {
           color: string
