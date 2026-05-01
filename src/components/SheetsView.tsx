@@ -746,6 +746,25 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
           </button>
         )}
       </div>
+
+      {/* FAB flotante: aparece al hacer scroll para colapsar/restaurar todas las partidas */}
+      {partidas.length > 0 && (
+        <button
+          onClick={() => setCollapseAllOverride(prev => prev === true ? null : true)}
+          aria-label={collapseAllOverride === true ? 'Restaurar vista previa' : 'Colapsar todas las partidas'}
+          title={collapseAllOverride === true ? 'Restaurar vista previa' : 'Colapsar todas las partidas'}
+          className={`sticky float-right bottom-4 mr-1 z-30 flex items-center justify-center w-11 h-11 rounded-full bg-background/90 backdrop-blur border border-border text-foreground shadow-lg hover:bg-muted transition-all duration-200 ${
+            showFloatingCollapse ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-2 pointer-events-none'
+          }`}
+          style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+        >
+          {collapseAllOverride === true ? (
+            <ChevronsUpDown className="w-4 h-4" />
+          ) : (
+            <ChevronsDownUp className="w-4 h-4" />
+          )}
+        </button>
+      )}
     </div>
   );
 }
