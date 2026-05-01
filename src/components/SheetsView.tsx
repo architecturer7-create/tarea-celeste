@@ -467,7 +467,21 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                       }}
                     />
                     <button
-                      onClick={() => setCollapsed(c => ({ ...c, [pa.id]: !c[pa.id] }))}
+                      onClick={() => {
+                        if (collapseAllOverride !== null) {
+                          // Sembramos el estado individual con el valor actual mostrado y desactivamos override
+                          const current = collapseAllOverride;
+                          setCollapsed(c => {
+                            const next: Record<string, boolean> = { ...c };
+                            partidas.forEach(p => { next[p.id] = current; });
+                            next[pa.id] = !current;
+                            return next;
+                          });
+                          setCollapseAllOverride(null);
+                        } else {
+                          setCollapsed(c => ({ ...c, [pa.id]: !c[pa.id] }));
+                        }
+                      }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-left relative z-10"
                     >
                       <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 cursor-grab active:cursor-grabbing shrink-0" />
