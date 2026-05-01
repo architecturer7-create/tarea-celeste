@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks, CalendarRange } from 'lucide-react';
+import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks, CalendarRange, SquareDashedKanban } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Proyecto, Tarea, MiembroProyecto, Perfil, EstadoTarea } from '@/lib/types';
@@ -12,6 +12,7 @@ import KanbanBoard from '@/components/KanbanBoard';
 import CreateTaskModal from '@/components/CreateTaskModal';
 import SheetsView from '@/components/SheetsView';
 import TimelineView from '@/components/TimelineView';
+import MiroView from '@/components/MiroView';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -25,7 +26,7 @@ export default function ProjectDetailPage() {
   const [miembros, setMiembros] = useState<MiembroProyecto[]>([]);
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [view, setView] = useState<'list' | 'kanban'>('list');
-  const [section, setSection] = useState<'tareas' | 'sheets' | 'timeline'>('tareas');
+  const [section, setSection] = useState<'tareas' | 'sheets' | 'timeline' | 'miro'>('tareas');
   const [selectedTask, setSelectedTask] = useState<Tarea | null>(null);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -96,6 +97,11 @@ export default function ProjectDetailPage() {
       .map(m => perfiles.find(p => p.user_id === m.usuario_id))
       .filter(Boolean) as Perfil[];
   }, [miembros, perfiles]);
+
+  const isOwner = useMemo(() => {
+    if (!user) return false;
+    return miembros.some(m => m.usuario_id === user.id && m.rol === 'propietario');
+  }, [miembros, user]);
 
   const getProfile = (userId: string | null) => perfiles.find(p => p.user_id === userId);
 
@@ -214,6 +220,14 @@ export default function ProjectDetailPage() {
           >
             <CalendarRange className="w-3.5 h-3.5" /> Timeline
           </button>
+          <button
+            onClick={() => setSection('miro')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] md:text-xs transition-colors ${
+              section === 'miro' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <SquareDashedKanban className="w-3.5 h-3.5" /> Miro
+          </button>
         </div>
 
         {/* Counters and filters */}
@@ -250,6 +264,8 @@ export default function ProjectDetailPage() {
           <SheetsView proyectoId={id!} />
         ) : section === 'timeline' ? (
           <TimelineView proyectoId={id!} />
+        ) : section === 'miro' ? (
+          <MiroView proyectoId={id!} isOwner={isOwner} />
         ) : view === 'list' ? (
           <div className="h-full overflow-y-auto p-3 md:p-4">
             {activeTareas.length === 0 && completedTareas.length === 0 ? (
