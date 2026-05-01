@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Trash2, Check, ChevronRight, FolderPlus, X, GripVertical, Pencil, UserCircle2, Copy, FolderInput, Users } from 'lucide-react';
+import { Plus, Trash2, Check, ChevronRight, FolderPlus, X, GripVertical, Pencil, UserCircle2, Copy, FolderInput, Users, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   ContextMenu,
@@ -62,6 +62,9 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
   const [dragPartida, setDragPartida] = useState<string | null>(null);
   const [dragOverPartida, setDragOverPartida] = useState<string | null>(null);
   const [selectedPlanos, setSelectedPlanos] = useState<Set<string>>(new Set());
+  // Override global independiente del estado individual de cada partida.
+  // null = sin override (respeta `collapsed`), true = todas colapsadas, false = todas expandidas
+  const [collapseAllOverride, setCollapseAllOverride] = useState<null | boolean>(null);
 
   const fetchData = async () => {
     const [pa, pl, mb] = await Promise.all([
@@ -357,7 +360,26 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
               {stats.done} de {stats.total} planos entregados · {stats.pending} pendientes
             </p>
           </div>
-          <div className="text-2xl font-semibold text-foreground tabular-nums">{stats.pct}%</div>
+          <div className="flex items-center gap-3">
+            {partidas.length > 0 && (
+              <button
+                onClick={() => setCollapseAllOverride(prev => prev === true ? null : true)}
+                title={collapseAllOverride === true ? 'Restaurar vista previa' : 'Colapsar todas las partidas'}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                {collapseAllOverride === true ? (
+                  <>
+                    <ChevronsUpDown className="w-3.5 h-3.5" /> Restaurar
+                  </>
+                ) : (
+                  <>
+                    <ChevronsDownUp className="w-3.5 h-3.5" /> Colapsar todas
+                  </>
+                )}
+              </button>
+            )}
+            <div className="text-2xl font-semibold text-foreground tabular-nums">{stats.pct}%</div>
+          </div>
         </div>
         <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
           <div
@@ -413,7 +435,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
 
         {partidas.map(pa => {
           const list = planosByPartida.get(pa.id) || [];
-          const isCollapsed = collapsed[pa.id];
+          const isCollapsed = collapseAllOverride !== null ? collapseAllOverride : !!collapsed[pa.id];
           const done = list.filter(p => p.entregado).length;
           const paPct = list.length === 0 ? 0 : Math.round((done / list.length) * 100);
           return (
@@ -445,7 +467,21 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                       }}
                     />
                     <button
-                      onClick={() => setCollapsed(c => ({ ...c, [pa.id]: !c[pa.id] }))}
+                      onClick={() => {
+                        if (collapseAllOverride !== null) {
+                          // Sembramos el estado individual con el valor actual mostrado y desactivamos override
+                          const current = collapseAllOverride;
+                          setCollapsed(c => {
+                            const next: Record<string, boolean> = { ...c };
+                            partidas.forEach(p => { next[p.id] = current; });
+                            next[pa.id] = !current;
+                            return next;
+                          });
+                          setCollapseAllOverride(null);
+                        } else {
+                          setCollapsed(c => ({ ...c, [pa.id]: !c[pa.id] }));
+                        }
+                      }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-left relative z-10"
                     >
                       <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 cursor-grab active:cursor-grabbing shrink-0" />
