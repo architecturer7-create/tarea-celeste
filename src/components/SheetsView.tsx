@@ -366,7 +366,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
       <div className="rounded-lg border border-border bg-card/40 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-medium text-foreground">Avance general</h2>
+            <h2 className="text-lg font-semibold text-foreground uppercase tracking-wide">AVANCE GENERAL</h2>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               {stats.done} de {stats.total} planos entregados · {stats.pending} pendientes
             </p>
