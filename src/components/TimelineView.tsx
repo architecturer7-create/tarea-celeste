@@ -32,39 +32,6 @@ type Zoom = 'dia' | 'semana' | 'mes';
 const ZOOM_PX: Record<Zoom, number> = { dia: 32, semana: 12, mes: 4 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-// Paleta profesional "deep navy" para el Gantt
-const GANTT_THEME = {
-  bg: '#0A1628',
-  bgAlt: '#0E1B30',
-  panel: '#0C1A2E',
-  border: 'rgba(148, 163, 184, 0.10)',
-  borderStrong: 'rgba(148, 163, 184, 0.18)',
-  weekend: 'rgba(148, 163, 184, 0.04)',
-  textMuted: 'rgba(148, 163, 184, 0.65)',
-  textDim: 'rgba(148, 163, 184, 0.40)',
-  textStrong: '#E2E8F0',
-  todayLine: '#38BDF8',
-};
-
-// Colores curados para barras (sobrios, alto contraste sobre navy)
-const BAR_PALETTE = [
-  '#E11D74', // magenta
-  '#0EA5E9', // sky
-  '#1E40AF', // deep blue
-  '#6366F1', // indigo
-  '#8B5CF6', // violet
-  '#06B6D4', // cyan
-  '#0284C7', // blue
-  '#DB2777', // pink
-];
-const hashStr = (s: string) => {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-};
-const barColorFor = (id: string) => BAR_PALETTE[hashStr(id) % BAR_PALETTE.length];
-
 const toDate = (s: string) => {
   const [y, m, d] = s.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d));
@@ -357,25 +324,23 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
   const SIDE_W = 240;
 
   return (
-    <div className="flex flex-col h-full" style={{ background: GANTT_THEME.bg, color: GANTT_THEME.textStrong }}>
+    <div className="flex flex-col h-full bg-background">
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-2 px-3 py-2" style={{ borderBottom: `1px solid ${GANTT_THEME.border}`, background: GANTT_THEME.bgAlt }}>
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border">
         <div className="flex items-center gap-1.5">
-          <button onClick={() => scrollByDays(-14)} className="p-1.5 rounded-md transition-colors" style={{ color: GANTT_THEME.textMuted }}><ChevronLeft className="w-3.5 h-3.5" /></button>
-          <button onClick={goToToday} className="px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors" style={{ color: GANTT_THEME.textMuted }}>Hoy</button>
-          <button onClick={() => scrollByDays(14)} className="p-1.5 rounded-md transition-colors" style={{ color: GANTT_THEME.textMuted }}><ChevronRight className="w-3.5 h-3.5" /></button>
+          <button onClick={() => scrollByDays(-14)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"><ChevronLeft className="w-3.5 h-3.5" /></button>
+          <button onClick={goToToday} className="px-2.5 py-1 rounded-md text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">Hoy</button>
+          <button onClick={() => scrollByDays(14)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"><ChevronRight className="w-3.5 h-3.5" /></button>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="flex items-center rounded-md overflow-hidden" style={{ border: `1px solid ${GANTT_THEME.borderStrong}` }}>
+          <div className="flex items-center border border-border rounded-md overflow-hidden">
             {(['dia', 'semana', 'mes'] as Zoom[]).map(z => (
               <button
                 key={z}
                 onClick={() => setZoom(z)}
-                className="px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider transition-colors"
-                style={{
-                  background: zoom === z ? 'rgba(148,163,184,0.10)' : 'transparent',
-                  color: zoom === z ? GANTT_THEME.textStrong : GANTT_THEME.textMuted,
-                }}
+                className={`px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider transition-colors ${
+                  zoom === z ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
                 {z === 'dia' ? 'Día' : z === 'semana' ? 'Semana' : 'Mes'}
               </button>
@@ -387,34 +352,33 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
       {/* Gantt body */}
       <div className="flex-1 overflow-hidden flex">
         {/* Left side panel */}
-        <div className="shrink-0" style={{ width: SIDE_W, background: GANTT_THEME.panel, borderRight: `1px solid ${GANTT_THEME.border}` }}>
-          <div className="h-[52px] flex items-end px-3 pb-1.5" style={{ borderBottom: `1px solid ${GANTT_THEME.border}` }}>
-            <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: GANTT_THEME.textMuted }}>Tarea</span>
+        <div className="shrink-0 border-r border-border bg-background" style={{ width: SIDE_W }}>
+          <div className="h-[52px] border-b border-border flex items-end px-3 pb-1.5">
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Partida</span>
           </div>
           <div className="overflow-y-auto" style={{ height: 'calc(100% - 52px)' }} id="timeline-side-scroll">
             {items.length === 0 && (
-              <div className="p-6 text-center text-xs" style={{ color: GANTT_THEME.textMuted }}>
+              <div className="p-6 text-center text-muted-foreground text-xs">
                 No hay partidas. Crea partidas en la pestaña Sheets para verlas aquí.
               </div>
             )}
             {items.map(item => {
               const responsable = miembros.find(m => m.user_id === item.responsable_id);
-              const accent = barColorFor(item.partidaId);
               return (
                 <div
                   key={item.rowId}
-                  className="px-3 flex items-center gap-2 group"
-                  style={{ height: ROW_H, borderBottom: `1px solid ${GANTT_THEME.border}` }}
+                  className="px-3 flex items-center gap-2 hover:bg-muted/30 group"
+                  style={{ height: ROW_H }}
                 >
-                  <div className="w-1 h-5 rounded-sm shrink-0" style={{ background: accent }} />
-                  <span className="text-xs truncate flex-1" style={{ color: GANTT_THEME.textStrong }}>{item.nombre}</span>
+                  <div className="w-1.5 h-5 rounded-sm shrink-0" style={{ background: item.partidaColor }} />
+                  <span className="text-xs text-foreground truncate flex-1">{item.nombre}</span>
                   <Popover>
                     <PopoverTrigger asChild>
                       <button className="shrink-0">
                         {responsable ? (
                           <UserAvatar nombre={responsable.nombre} color={responsable.color_avatar} avatarUrl={responsable.avatar_url} size="sm" />
                         ) : (
-                          <div className="w-6 h-6 rounded-full border border-dashed transition-colors" style={{ borderColor: GANTT_THEME.borderStrong }} />
+                          <div className="w-6 h-6 rounded-full border border-dashed border-border hover:border-foreground/40 transition-colors" />
                         )}
                       </button>
                     </PopoverTrigger>
@@ -448,22 +412,22 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
         <div
           ref={scrollRef}
           className="flex-1 overflow-auto relative"
-          style={{ background: GANTT_THEME.bg, cursor: 'ew-resize' }}
           onScroll={(e) => {
             const side = document.getElementById('timeline-side-scroll');
             if (side) side.scrollTop = (e.target as HTMLDivElement).scrollTop;
           }}
           onMouseDown={onPanStart}
+          style={{ cursor: 'ew-resize' }}
         >
           <div style={{ width: totalWidth, position: 'relative' }}>
             {/* Header */}
-            <div className="sticky top-0 z-20" style={{ height: 52, background: GANTT_THEME.bgAlt, borderBottom: `1px solid ${GANTT_THEME.border}` }}>
+            <div className="sticky top-0 z-20 bg-background border-b border-border" style={{ height: 52 }}>
               <div className="relative" style={{ height: 24 }}>
                 {headerRows.months.map((m, i) => (
                   <div
                     key={i}
-                    className="absolute top-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-widest"
-                    style={{ left: m.offset, width: m.width, height: 24, color: GANTT_THEME.textMuted, borderRight: `1px solid ${GANTT_THEME.border}` }}
+                    className="absolute top-0 flex items-center justify-center text-[10px] font-semibold text-muted-foreground uppercase tracking-widest border-r border-border/50"
+                    style={{ left: m.offset, width: m.width, height: 24 }}
                   >
                     {m.label}
                   </div>
@@ -473,14 +437,10 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
                 {headerRows.days.map((d, i) => (
                   <div
                     key={i}
-                    className="absolute top-0 flex items-center justify-center text-[10px]"
-                    style={{
-                      left: d.offset,
-                      width: dayPx,
-                      height: 28,
-                      color: d.isToday ? GANTT_THEME.todayLine : d.isWeekend ? GANTT_THEME.textDim : GANTT_THEME.textMuted,
-                      fontWeight: d.isToday ? 700 : 400,
-                    }}
+                    className={`absolute top-0 flex items-center justify-center text-[10px] ${
+                      d.isToday ? 'text-foreground font-bold' : d.isWeekend ? 'text-muted-foreground/40' : 'text-muted-foreground/70'
+                    }`}
+                    style={{ left: d.offset, width: dayPx, height: 28 }}
                   >
                     {dayPx >= 20 ? d.label : (d.isFirst ? d.label : '')}
                   </div>
@@ -494,23 +454,20 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
                 {headerRows.days.map((d, i) => (
                   <div
                     key={i}
-                    className="absolute top-0 bottom-0"
-                    style={{
-                      left: d.offset,
-                      width: dayPx,
-                      borderLeft: d.isFirst ? `1px solid ${GANTT_THEME.border}` : undefined,
-                      background: d.isWeekend ? GANTT_THEME.weekend : undefined,
-                    }}
+                    className={`absolute top-0 bottom-0 ${
+                      d.isFirst ? 'border-l border-border/50' : d.isWeekend ? 'bg-muted/20' : ''
+                    }`}
+                    style={{ left: d.offset, width: dayPx }}
                   />
                 ))}
               </div>
 
               {todayOffset >= 0 && todayOffset <= totalWidth && (
                 <div
-                  className="absolute top-0 bottom-0 w-px pointer-events-none z-10"
-                  style={{ left: todayOffset, background: GANTT_THEME.todayLine, opacity: 0.7 }}
+                  className="absolute top-0 bottom-0 w-px bg-primary/70 pointer-events-none z-10"
+                  style={{ left: todayOffset }}
                 >
-                  <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full" style={{ background: GANTT_THEME.todayLine }} />
+                  <div className="absolute -top-1 -left-1 w-2 h-2 rounded-full bg-primary" />
                 </div>
               )}
 
@@ -519,34 +476,33 @@ export default function TimelineView({ proyectoId }: { proyectoId: string }) {
                 const end = toDate(item.fecha_fin);
                 const offset = diffDays(rangeStart, start) * dayPx;
                 const width = Math.max(dayPx, (diffDays(start, end) + 1) * dayPx);
-                const barColor = barColorFor(item.partidaId);
+                const responsable = miembros.find(m => m.user_id === item.responsable_id);
+                const barColor = responsable?.color_avatar || item.partidaColor;
                 return (
-                  <div key={item.rowId} className="relative" style={{ height: ROW_H, borderBottom: `1px solid ${GANTT_THEME.border}` }}>
+                  <div key={item.rowId} className="relative" style={{ height: ROW_H }}>
                     <div
                       className="absolute top-1/2 -translate-y-1/2 rounded-md flex items-center px-2 group select-none"
                       style={{
                         left: offset,
                         width,
-                        height: 24,
-                        background: barColor,
-                        boxShadow: `inset 0 0 0 1px ${barColor}, 0 1px 0 rgba(0,0,0,0.25)`,
+                        height: 22,
+                        background: `linear-gradient(90deg, ${barColor}EE, ${barColor}99)`,
+                        boxShadow: `0 0 0 1px ${barColor}40, 0 2px 8px ${barColor}30`,
                         cursor: 'grab',
                       }}
                       onMouseDown={(e) => onMouseDownBar(e, item, 'move')}
                       title={`${item.nombre} · ${item.fecha_inicio} → ${item.fecha_fin}`}
                     >
                       <div
-                        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 rounded-l-md"
-                        style={{ background: 'rgba(255,255,255,0.25)' }}
+                        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-foreground/20 rounded-l-md"
                         onMouseDown={(e) => onMouseDownBar(e, item, 'resize-l')}
                       />
                       <div
-                        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 rounded-r-md"
-                        style={{ background: 'rgba(255,255,255,0.25)' }}
+                        className="absolute right-0 top-0 bottom-0 w-1.5 cursor-ew-resize opacity-0 group-hover:opacity-100 bg-foreground/20 rounded-r-md"
                         onMouseDown={(e) => onMouseDownBar(e, item, 'resize-r')}
                       />
                       <div className="w-1.5 h-1.5 rounded-full bg-white/90 shrink-0 mr-1.5" />
-                      <span className="text-[11px] font-semibold text-white truncate pointer-events-none tracking-tight">
+                      <span className="text-[11px] font-medium text-white truncate pointer-events-none">
                         {item.nombre}
                       </span>
                     </div>
