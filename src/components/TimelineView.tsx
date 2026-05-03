@@ -32,6 +32,39 @@ type Zoom = 'dia' | 'semana' | 'mes';
 const ZOOM_PX: Record<Zoom, number> = { dia: 32, semana: 12, mes: 4 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Paleta profesional "deep navy" para el Gantt
+const GANTT_THEME = {
+  bg: '#0A1628',
+  bgAlt: '#0E1B30',
+  panel: '#0C1A2E',
+  border: 'rgba(148, 163, 184, 0.10)',
+  borderStrong: 'rgba(148, 163, 184, 0.18)',
+  weekend: 'rgba(148, 163, 184, 0.04)',
+  textMuted: 'rgba(148, 163, 184, 0.65)',
+  textDim: 'rgba(148, 163, 184, 0.40)',
+  textStrong: '#E2E8F0',
+  todayLine: '#38BDF8',
+};
+
+// Colores curados para barras (sobrios, alto contraste sobre navy)
+const BAR_PALETTE = [
+  '#E11D74', // magenta
+  '#0EA5E9', // sky
+  '#1E40AF', // deep blue
+  '#6366F1', // indigo
+  '#8B5CF6', // violet
+  '#06B6D4', // cyan
+  '#0284C7', // blue
+  '#DB2777', // pink
+];
+const hashStr = (s: string) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+};
+const barColorFor = (id: string) => BAR_PALETTE[hashStr(id) % BAR_PALETTE.length];
+
 const toDate = (s: string) => {
   const [y, m, d] = s.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d));
