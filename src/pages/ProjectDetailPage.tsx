@@ -13,6 +13,7 @@ import CreateTaskModal from '@/components/CreateTaskModal';
 import SheetsView from '@/components/SheetsView';
 import TimelineView from '@/components/TimelineView';
 import MiroView from '@/components/MiroView';
+import MiroTabButton from '@/components/MiroTabButton';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,6 +28,8 @@ export default function ProjectDetailPage() {
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [view, setView] = useState<'list' | 'kanban'>('list');
   const [section, setSection] = useState<'tareas' | 'sheets' | 'timeline' | 'miro'>('tareas');
+  const [miroActiveId, setMiroActiveId] = useState<string | null>(null);
+  const [miroAction, setMiroAction] = useState<'create' | null>(null);
   const [selectedTask, setSelectedTask] = useState<Tarea | null>(null);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -244,14 +247,20 @@ export default function ProjectDetailPage() {
           >
             <CalendarRange className="w-3.5 h-3.5" /> Timeline
           </button>
-          <button
-            onClick={() => setSection('miro')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] md:text-xs transition-colors ${
-              section === 'miro' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <SquareDashedKanban className="w-3.5 h-3.5" /> Miro
-          </button>
+          <MiroTabButton
+            proyectoId={id!}
+            isOwner={isOwner}
+            isActive={section === 'miro'}
+            activeBoardId={miroActiveId}
+            onOpenBoard={(boardId) => {
+              setSection('miro');
+              if (boardId) setMiroActiveId(boardId);
+            }}
+            onCreate={() => {
+              setSection('miro');
+              setMiroAction('create');
+            }}
+          />
         </div>
 
         {/* Counters and filters */}
@@ -289,7 +298,13 @@ export default function ProjectDetailPage() {
         ) : section === 'timeline' ? (
           <TimelineView proyectoId={id!} />
         ) : section === 'miro' ? (
-          <MiroView proyectoId={id!} isOwner={isOwner} />
+          <MiroView
+            proyectoId={id!}
+            isOwner={isOwner}
+            externalActiveId={miroActiveId}
+            externalAction={miroAction}
+            onExternalConsumed={() => { setMiroActiveId(null); setMiroAction(null); }}
+          />
         ) : view === 'list' ? (
           <div className="h-full overflow-y-auto p-3 md:p-4">
             {activeTareas.length === 0 && completedTareas.length === 0 ? (
