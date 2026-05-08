@@ -129,6 +129,30 @@ export default function ProjectDetailPage() {
     fetchData();
   };
 
+  const removeMember = async (usuarioId: string) => {
+    if (!id) return;
+    if (usuarioId === user?.id) {
+      toast.error('No puedes eliminarte a ti mismo');
+      return;
+    }
+    const member = miembros.find(m => m.usuario_id === usuarioId);
+    if (member?.rol === 'propietario') {
+      toast.error('No se puede eliminar al propietario');
+      return;
+    }
+    const { error } = await supabase
+      .from('miembros_proyecto')
+      .delete()
+      .eq('proyecto_id', id)
+      .eq('usuario_id', usuarioId);
+    if (error) {
+      toast.error('Error al eliminar miembro');
+    } else {
+      toast.success('Miembro eliminado');
+      fetchData();
+    }
+  };
+
   const deleteTask = async (taskId: string) => {
     const { error } = await supabase.from('tareas').delete().eq('id', taskId);
     if (error) {
@@ -425,20 +449,47 @@ export default function ProjectDetailPage() {
       {showInvite && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
           <div className="glass-panel rounded-lg p-6 w-full max-w-sm animate-fade-in">
-            <h3 className="text-base font-medium text-foreground mb-4">Invitar miembro</h3>
+            <h3 className="text-base font-medium text-foreground mb-4">Miembros del proyecto</h3>
+
+            <div className="space-y-1.5 mb-4 max-h-64 overflow-y-auto">
+              {memberProfiles.map(p => {
+                const member = miembros.find(m => m.usuario_id === p.user_id);
+                const esPropietario = member?.rol === 'propietario';
+                const esYo = p.user_id === user?.id;
+                return (
+                  <div key={p.user_id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted/50">
+                    <UserAvatar nombre={p.nombre} color={p.color_avatar} avatarUrl={p.avatar_url} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-foreground truncate">{p.nombre}{esYo && ' (tú)'}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{esPropietario ? 'Propietario' : 'Miembro'}</p>
+                    </div>
+                    {isOwner && !esPropietario && !esYo && (
+                      <button
+                        type="button"
+                        onClick={() => removeMember(p.user_id)}
+                        className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Eliminar miembro"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
             <form onSubmit={handleInvite} className="space-y-4">
               <input
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                required
                 autoFocus
                 className="w-full h-10 px-3 rounded-md bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                placeholder="email@ejemplo.com"
+                placeholder="Invitar por email…"
               />
               <div className="flex gap-2 justify-end">
-                <button type="button" onClick={() => setShowInvite(false)} className="h-9 px-4 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
-                <button type="submit" className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">Invitar</button>
+                <button type="button" onClick={() => setShowInvite(false)} className="h-9 px-4 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">Cerrar</button>
+                <button type="submit" disabled={!inviteEmail.trim()} className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">Invitar</button>
               </div>
             </form>
           </div>
