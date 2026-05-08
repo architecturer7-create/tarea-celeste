@@ -287,6 +287,24 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
     fetchData();
   };
 
+  const focusPartida = (id: string) => {
+    if (collapseAllOverride !== null) {
+      const current = collapseAllOverride;
+      setCollapsed(c => {
+        const next: Record<string, boolean> = { ...c };
+        partidas.forEach(p => { next[p.id] = current; });
+        next[id] = false;
+        return next;
+      });
+      setCollapseAllOverride(null);
+    } else {
+      setCollapsed(c => ({ ...c, [id]: false }));
+    }
+    setTimeout(() => {
+      document.getElementById(`partida-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 60);
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-full"><div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
   }
@@ -403,7 +421,13 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
               const done = list.filter(p => p.entregado).length;
               const pct = list.length === 0 ? 0 : Math.round((done / list.length) * 100);
               return (
-                <div key={pa.id} className="space-y-1">
+                <button
+                  key={pa.id}
+                  type="button"
+                  onClick={() => focusPartida(pa.id)}
+                  title={`Ver ${pa.nombre}`}
+                  className="space-y-1 text-left rounded-md p-1 -m-1 hover:bg-muted/40 transition-colors"
+                >
                   <div className="flex items-center justify-between text-[11px]">
                     <div className="flex items-center gap-1.5 min-w-0">
                       <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: pa.color }} />
@@ -420,7 +444,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                       }}
                     />
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -449,6 +473,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
           return (
             <div
               key={pa.id}
+              id={`partida-${pa.id}`}
               draggable
               onDragStart={() => setDragPartida(pa.id)}
               onDragOver={(e) => { e.preventDefault(); setDragOverPartida(pa.id); }}

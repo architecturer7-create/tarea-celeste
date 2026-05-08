@@ -204,6 +204,7 @@ export type Database = {
           id: string
           miro_board_id: string
           miro_url: string
+          nombre: string
           proyecto_id: string
         }
         Insert: {
@@ -212,6 +213,7 @@ export type Database = {
           id?: string
           miro_board_id: string
           miro_url: string
+          nombre?: string
           proyecto_id: string
         }
         Update: {
@@ -220,6 +222,7 @@ export type Database = {
           id?: string
           miro_board_id?: string
           miro_url?: string
+          nombre?: string
           proyecto_id?: string
         }
         Relationships: []
