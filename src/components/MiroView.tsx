@@ -8,6 +8,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 interface Props {
   proyectoId: string;
   isOwner: boolean;
+  externalActiveId?: string | null;
+  externalAction?: 'create' | null;
+  onExternalConsumed?: () => void;
 }
 
 interface MiroRow {
@@ -31,7 +34,7 @@ function buildEmbedUrl(boardId: string): string {
   return `https://miro.com/app/live-embed/${boardId}/?embedMode=view_only_without_ui`;
 }
 
-export default function MiroView({ proyectoId, isOwner }: Props) {
+export default function MiroView({ proyectoId, isOwner, externalActiveId, externalAction, onExternalConsumed }: Props) {
   const { user } = useAuth();
   const [rows, setRows] = useState<MiroRow[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -60,6 +63,26 @@ export default function MiroView({ proyectoId, isOwner }: Props) {
   };
 
   useEffect(() => { fetchRows(); }, [proyectoId]);
+
+  // Apply external controls coming from the tab button
+  useEffect(() => {
+    if (externalActiveId) {
+      setActiveId(externalActiveId);
+      setCreating(false);
+      setEditing(null);
+      onExternalConsumed?.();
+    }
+  }, [externalActiveId]);
+
+  useEffect(() => {
+    if (externalAction === 'create') {
+      setCreating(true);
+      setEditing(null);
+      setUrlInput('');
+      setNombreInput('');
+      onExternalConsumed?.();
+    }
+  }, [externalAction]);
 
   const resetForm = () => {
     setEditing(null);
