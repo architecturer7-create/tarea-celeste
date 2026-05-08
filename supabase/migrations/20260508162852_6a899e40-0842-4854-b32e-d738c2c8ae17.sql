@@ -1,0 +1,1 @@
+ALTER TABLE public.proyecto_miro ADD COLUMN IF NOT EXISTS nombre text NOT NULL DEFAULT 'Tablero';
