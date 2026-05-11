@@ -624,14 +624,14 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                               <div className="flex items-center gap-1 ml-auto shrink-0">
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setEstadoPlano(plano, 'pre_entrega'); }}
-                                  title="Pre-entrega"
+                                  title="Pre-Entrega"
                                   className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-all ${
                                     plano.pre_entrega
                                       ? 'text-white border-transparent bg-gradient-to-r from-accent via-accent to-status-progress shadow-[0_0_10px_-2px_hsl(var(--accent)/0.5)]'
                                       : 'text-muted-foreground border-border bg-transparent hover:text-foreground'
                                   }`}
                                 >
-                                  Pre-entrega
+                                  Pre-Entrega
                                 </button>
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setEstadoPlano(plano, 'finalizado'); }}
