@@ -152,6 +152,7 @@ export type Database = {
           fecha_actualizacion: string
           fecha_creacion: string
           fecha_entrega: string | null
+          finalizado: boolean
           id: string
           nombre: string
           notas: string | null
@@ -167,6 +168,7 @@ export type Database = {
           fecha_actualizacion?: string
           fecha_creacion?: string
           fecha_entrega?: string | null
+          finalizado?: boolean
           id?: string
           nombre: string
           notas?: string | null
@@ -182,6 +184,7 @@ export type Database = {
           fecha_actualizacion?: string
           fecha_creacion?: string
           fecha_entrega?: string | null
+          finalizado?: boolean
           id?: string
           nombre?: string
           notas?: string | null
