@@ -32,6 +32,7 @@ interface Plano {
   codigo: string;
   nombre: string;
   entregado: boolean;
+  pre_entrega?: boolean;
   responsable_id?: string | null;
 }
 
@@ -170,6 +171,19 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
     await supabase.from('planos').update({
       entregado: next,
       fecha_entrega: next ? new Date().toISOString() : null,
+    }).eq('id', p.id);
+    fetchData();
+  };
+
+  const togglePreEntrega = async (p: Plano) => {
+    await supabase.from('planos').update({ pre_entrega: !p.pre_entrega }).eq('id', p.id);
+    fetchData();
+  };
+
+  const setFinalizado = async (p: Plano, value: boolean) => {
+    await supabase.from('planos').update({
+      entregado: value,
+      fecha_entrega: value ? new Date().toISOString() : null,
     }).eq('id', p.id);
     fetchData();
   };
@@ -604,6 +618,30 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                               >
                                 <Pencil className="w-3 h-3" />
                               </button>
+                              <div className="flex items-center gap-1 ml-auto shrink-0">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); togglePreEntrega(plano); }}
+                                  title="Pre-entrega"
+                                  className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-all ${
+                                    plano.pre_entrega
+                                      ? 'text-white border-transparent bg-gradient-to-r from-accent to-status-progress shadow-sm'
+                                      : 'text-muted-foreground border-border bg-transparent hover:text-foreground'
+                                  }`}
+                                >
+                                  Pre-entrega
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setFinalizado(plano, !plano.entregado); }}
+                                  title="Finalizado"
+                                  className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-all ${
+                                    plano.entregado
+                                      ? 'text-white border-transparent bg-gradient-to-r from-secondary to-status-completed shadow-sm'
+                                      : 'text-muted-foreground border-border bg-transparent hover:text-foreground'
+                                  }`}
+                                >
+                                  Finalizado
+                                </button>
+                              </div>
                               {(() => {
                                 const r = miembros.find(m => m.user_id === plano.responsable_id);
                                 return r ? (
@@ -612,10 +650,10 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                                     color={r.color_avatar}
                                     avatarUrl={r.avatar_url}
                                     size="sm"
-                                    className="ml-auto shrink-0"
+                                    className="shrink-0"
                                   />
                                 ) : (
-                                  <div className="w-6 h-6 rounded-full border border-dashed border-border ml-auto shrink-0" title="Sin asignar" />
+                                  <div className="w-6 h-6 rounded-full border border-dashed border-border shrink-0" title="Sin asignar" />
                                 );
                               })()}
                             </>

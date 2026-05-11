@@ -156,6 +156,7 @@ export type Database = {
           nombre: string
           notas: string | null
           partida_id: string
+          pre_entrega: boolean
           proyecto_id: string
           responsable_id: string | null
         }
@@ -170,6 +171,7 @@ export type Database = {
           nombre: string
           notas?: string | null
           partida_id: string
+          pre_entrega?: boolean
           proyecto_id: string
           responsable_id?: string | null
         }
@@ -184,6 +186,7 @@ export type Database = {
           nombre?: string
           notas?: string | null
           partida_id?: string
+          pre_entrega?: boolean
           proyecto_id?: string
           responsable_id?: string | null
         }
