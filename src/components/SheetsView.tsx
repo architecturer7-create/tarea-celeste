@@ -627,7 +627,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                                   title="Pre-Entrega"
                                   className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-all ${
                                     plano.pre_entrega
-                                      ? 'text-white border-transparent bg-gradient-to-r from-accent via-accent to-status-progress shadow-[0_0_10px_-2px_hsl(var(--accent)/0.5)]'
+                                      ? 'text-white border-transparent bg-gradient-to-r from-accent via-accent/80 to-black shadow-[0_0_10px_-2px_hsl(var(--accent)/0.5)]'
                                       : 'text-muted-foreground border-border bg-transparent hover:text-foreground'
                                   }`}
                                 >
@@ -638,7 +638,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                                   title="Finalizado"
                                   className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-all ${
                                     plano.finalizado
-                                      ? 'text-white border-transparent bg-gradient-to-r from-secondary via-secondary to-status-completed shadow-[0_0_10px_-2px_hsl(var(--secondary)/0.5)]'
+                                      ? 'text-white border-transparent bg-gradient-to-r from-secondary via-secondary/80 to-black shadow-[0_0_10px_-2px_hsl(var(--secondary)/0.5)]'
                                       : 'text-muted-foreground border-border bg-transparent hover:text-foreground'
                                   }`}
                                 >
