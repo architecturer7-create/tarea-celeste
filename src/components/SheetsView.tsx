@@ -33,6 +33,7 @@ interface Plano {
   nombre: string;
   entregado: boolean;
   pre_entrega?: boolean;
+  finalizado?: boolean;
   responsable_id?: string | null;
 }
 
@@ -175,16 +176,18 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
     fetchData();
   };
 
-  const togglePreEntrega = async (p: Plano) => {
-    await supabase.from('planos').update({ pre_entrega: !p.pre_entrega }).eq('id', p.id);
-    fetchData();
-  };
-
-  const setFinalizado = async (p: Plano, value: boolean) => {
-    await supabase.from('planos').update({
-      entregado: value,
-      fecha_entrega: value ? new Date().toISOString() : null,
-    }).eq('id', p.id);
+  const setEstadoPlano = async (p: Plano, estado: 'pre_entrega' | 'finalizado') => {
+    const isActive = estado === 'pre_entrega' ? p.pre_entrega : p.finalizado;
+    if (isActive) {
+      // toggle off
+      await supabase.from('planos').update({ [estado]: false }).eq('id', p.id);
+    } else {
+      // mutually exclusive
+      await supabase.from('planos').update({
+        pre_entrega: estado === 'pre_entrega',
+        finalizado: estado === 'finalizado',
+      }).eq('id', p.id);
+    }
     fetchData();
   };
 
@@ -620,22 +623,22 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                               </button>
                               <div className="flex items-center gap-1 ml-auto shrink-0">
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); togglePreEntrega(plano); }}
+                                  onClick={(e) => { e.stopPropagation(); setEstadoPlano(plano, 'pre_entrega'); }}
                                   title="Pre-entrega"
                                   className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-all ${
                                     plano.pre_entrega
-                                      ? 'text-white border-transparent bg-gradient-to-r from-accent to-status-progress shadow-sm'
+                                      ? 'text-white border-transparent bg-gradient-to-r from-accent via-accent to-status-progress shadow-[0_0_10px_-2px_hsl(var(--accent)/0.5)]'
                                       : 'text-muted-foreground border-border bg-transparent hover:text-foreground'
                                   }`}
                                 >
                                   Pre-entrega
                                 </button>
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); setFinalizado(plano, !plano.entregado); }}
+                                  onClick={(e) => { e.stopPropagation(); setEstadoPlano(plano, 'finalizado'); }}
                                   title="Finalizado"
                                   className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-all ${
-                                    plano.entregado
-                                      ? 'text-white border-transparent bg-gradient-to-r from-secondary to-status-completed shadow-sm'
+                                    plano.finalizado
+                                      ? 'text-white border-transparent bg-gradient-to-r from-secondary via-secondary to-status-completed shadow-[0_0_10px_-2px_hsl(var(--secondary)/0.5)]'
                                       : 'text-muted-foreground border-border bg-transparent hover:text-foreground'
                                   }`}
                                 >
