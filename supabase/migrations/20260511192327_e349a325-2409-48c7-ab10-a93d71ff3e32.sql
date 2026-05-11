@@ -1,0 +1,1 @@
+ALTER TABLE public.planos ADD COLUMN IF NOT EXISTS finalizado boolean NOT NULL DEFAULT false;
