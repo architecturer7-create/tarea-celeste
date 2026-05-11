@@ -179,8 +179,8 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
   const setEstadoPlano = async (p: Plano, estado: 'pre_entrega' | 'finalizado') => {
     const isActive = estado === 'pre_entrega' ? p.pre_entrega : p.finalizado;
     if (isActive) {
-      // toggle off
-      await supabase.from('planos').update({ [estado]: false }).eq('id', p.id);
+      const patch = estado === 'pre_entrega' ? { pre_entrega: false } : { finalizado: false };
+      await supabase.from('planos').update(patch).eq('id', p.id);
     } else {
       // mutually exclusive
       await supabase.from('planos').update({
