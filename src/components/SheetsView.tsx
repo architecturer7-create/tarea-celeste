@@ -627,7 +627,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                                   title="Pre-Entrega"
                                   className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-all ${
                                     plano.pre_entrega
-                                      ? 'text-white border-transparent bg-[linear-gradient(to_right,hsl(var(--accent))_0%,hsl(var(--accent))_30%,#000_100%)] shadow-[0_0_10px_-2px_hsl(var(--accent)/0.5)]'
+                                      ? 'text-white border-[hsl(0_0%_0%)] overflow-hidden bg-[linear-gradient(to_right,hsl(var(--accent))_0%,hsl(var(--accent))_24%,hsl(0_0%_0%)_68%,hsl(0_0%_0%)_100%)] shadow-[0_0_10px_-4px_hsl(0_0%_0%/0.95)]'
                                       : 'text-muted-foreground border-border bg-transparent hover:text-foreground'
                                   }`}
                                 >
@@ -638,7 +638,7 @@ export default function SheetsView({ proyectoId }: { proyectoId: string }) {
                                   title="Finalizado"
                                   className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-all ${
                                     plano.finalizado
-                                      ? 'text-white border-transparent bg-[linear-gradient(to_right,hsl(var(--secondary))_0%,hsl(var(--secondary))_30%,#000_100%)] shadow-[0_0_10px_-2px_hsl(var(--secondary)/0.5)]'
+                                      ? 'text-white border-[hsl(0_0%_0%)] overflow-hidden bg-[linear-gradient(to_right,hsl(var(--secondary))_0%,hsl(var(--secondary))_24%,hsl(0_0%_0%)_68%,hsl(0_0%_0%)_100%)] shadow-[0_0_10px_-4px_hsl(0_0%_0%/0.95)]'
                                       : 'text-muted-foreground border-border bg-transparent hover:text-foreground'
                                   }`}
                                 >
