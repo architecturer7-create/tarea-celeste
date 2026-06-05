@@ -314,6 +314,8 @@ export default function ProjectDetailPage() {
             externalAction={miroAction}
             onExternalConsumed={() => { setMiroActiveId(null); setMiroAction(null); }}
           />
+        ) : section === 'connect' ? (
+          <ConnectView proyectoId={id!} perfiles={perfiles} />
         ) : view === 'list' ? (
           <div className="h-full overflow-y-auto p-3 md:p-4">
             {activeTareas.length === 0 && completedTareas.length === 0 ? (
