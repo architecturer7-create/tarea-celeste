@@ -52,6 +52,42 @@ export type Database = {
           },
         ]
       }
+      chat_mensajes: {
+        Row: {
+          archivo_nombre: string | null
+          archivo_path: string | null
+          archivo_tamano: number | null
+          archivo_tipo: string | null
+          autor_id: string
+          contenido: string
+          fecha: string
+          id: string
+          proyecto_id: string
+        }
+        Insert: {
+          archivo_nombre?: string | null
+          archivo_path?: string | null
+          archivo_tamano?: number | null
+          archivo_tipo?: string | null
+          autor_id: string
+          contenido?: string
+          fecha?: string
+          id?: string
+          proyecto_id: string
+        }
+        Update: {
+          archivo_nombre?: string | null
+          archivo_path?: string | null
+          archivo_tamano?: number | null
+          archivo_tipo?: string | null
+          autor_id?: string
+          contenido?: string
+          fecha?: string
+          id?: string
+          proyecto_id?: string
+        }
+        Relationships: []
+      }
       miembros_proyecto: {
         Row: {
           created_at: string
