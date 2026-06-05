@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks, CalendarRange, SquareDashedKanban } from 'lucide-react';
+import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks, CalendarRange, SquareDashedKanban, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Proyecto, Tarea, MiembroProyecto, Perfil, EstadoTarea } from '@/lib/types';
@@ -14,6 +14,7 @@ import SheetsView from '@/components/SheetsView';
 import TimelineView from '@/components/TimelineView';
 import MiroView from '@/components/MiroView';
 import MiroTabButton from '@/components/MiroTabButton';
+import ConnectView from '@/components/ConnectView';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,7 +28,7 @@ export default function ProjectDetailPage() {
   const [miembros, setMiembros] = useState<MiembroProyecto[]>([]);
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [view, setView] = useState<'list' | 'kanban'>('list');
-  const [section, setSection] = useState<'tareas' | 'sheets' | 'timeline' | 'miro'>('tareas');
+  const [section, setSection] = useState<'tareas' | 'sheets' | 'timeline' | 'miro' | 'connect'>('tareas');
   const [miroActiveId, setMiroActiveId] = useState<string | null>(null);
   const [miroAction, setMiroAction] = useState<'create' | null>(null);
   const [selectedTask, setSelectedTask] = useState<Tarea | null>(null);
