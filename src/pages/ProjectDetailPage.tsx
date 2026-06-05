@@ -262,6 +262,14 @@ export default function ProjectDetailPage() {
               setMiroAction('create');
             }}
           />
+          <button
+            onClick={() => setSection('connect')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] md:text-xs transition-colors ${
+              section === 'connect' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <MessageCircle className="w-3.5 h-3.5" /> Connect
+          </button>
         </div>
 
         {/* Counters and filters */}
