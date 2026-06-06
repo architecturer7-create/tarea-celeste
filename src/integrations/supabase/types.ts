@@ -62,6 +62,7 @@ export type Database = {
           contenido: string
           fecha: string
           id: string
+          menciones: string[]
           proyecto_id: string
         }
         Insert: {
@@ -73,6 +74,7 @@ export type Database = {
           contenido?: string
           fecha?: string
           id?: string
+          menciones?: string[]
           proyecto_id: string
         }
         Update: {
@@ -84,6 +86,7 @@ export type Database = {
           contenido?: string
           fecha?: string
           id?: string
+          menciones?: string[]
           proyecto_id?: string
         }
         Relationships: []

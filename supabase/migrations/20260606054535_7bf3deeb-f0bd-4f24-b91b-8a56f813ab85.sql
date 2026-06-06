@@ -1,0 +1,1 @@
+ALTER TABLE public.chat_mensajes ADD COLUMN IF NOT EXISTS menciones uuid[] NOT NULL DEFAULT '{}';
