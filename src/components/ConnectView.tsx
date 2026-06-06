@@ -435,19 +435,46 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
           >
             <Paperclip className="w-4 h-4" />
           </button>
-          <textarea
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend(e as unknown as React.FormEvent);
-              }
-            }}
-            placeholder="Escribe un mensaje..."
-            rows={1}
-            className="flex-1 resize-none min-h-10 max-h-32 px-3 py-2 rounded-md bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+          <div className="flex-1 relative">
+            {mentionQuery !== null && mentionCandidates.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border rounded-md shadow-lg overflow-hidden z-10 max-h-56 overflow-y-auto">
+                {mentionCandidates.map((p, i) => (
+                  <button
+                    key={p.user_id}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); insertMention(p); }}
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-sm transition-colors ${
+                      i === mentionIndex ? 'bg-muted text-foreground' : 'text-foreground/80 hover:bg-muted/60'
+                    }`}
+                  >
+                    <UserAvatar nombre={p.nombre} color={p.color_avatar} avatarUrl={p.avatar_url} size="sm" />
+                    <span className="flex-1 truncate">{p.nombre}</span>
+                    <span className="text-[10px] text-muted-foreground">@{p.nombre.replace(/\s+/g, '_')}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <textarea
+              ref={textareaRef}
+              value={texto}
+              onChange={(e) => handleTextChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (mentionQuery !== null && mentionCandidates.length > 0) {
+                  if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex((i) => Math.min(i + 1, mentionCandidates.length - 1)); return; }
+                  if (e.key === 'ArrowUp')   { e.preventDefault(); setMentionIndex((i) => Math.max(i - 1, 0)); return; }
+                  if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertMention(mentionCandidates[mentionIndex]); return; }
+                  if (e.key === 'Escape')   { e.preventDefault(); setMentionQuery(null); return; }
+                }
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend(e as unknown as React.FormEvent);
+                }
+              }}
+              placeholder="Escribe un mensaje… usa @ para mencionar"
+              rows={1}
+              className="w-full resize-none min-h-10 max-h-32 px-3 py-2 rounded-md bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
           <button
             type="submit"
             disabled={enviando || (!texto.trim() && !archivo)}
