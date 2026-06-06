@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Paperclip, Send, Loader2, Download, Trash2, FileText, X } from 'lucide-react';
+import { Paperclip, Send, Loader2, Download, Trash2, FileText, X, Bell, BellOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/UserAvatar';
 import type { Perfil } from '@/lib/types';
 import { toast } from 'sonner';
+import { enablePush, disablePush, isSubscribed, getPushStatus, isPushSupported } from '@/lib/pushNotifications';
 
 interface ChatMensaje {
   id: string;
@@ -46,12 +47,14 @@ function formatDay(fecha: string): string {
 }
 
 export default function ConnectView({ proyectoId, perfiles }: Props) {
-  const { user } = useAuth();
+  const { user, perfil } = useAuth();
   const [mensajes, setMensajes] = useState<ChatMensaje[]>([]);
   const [loading, setLoading] = useState(true);
   const [texto, setTexto] = useState('');
   const [archivo, setArchivo] = useState<File | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -81,6 +84,36 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [mensajes.length]);
+
+  useEffect(() => {
+    isSubscribed().then(setPushOn).catch(() => setPushOn(false));
+  }, []);
+
+  const togglePush = async () => {
+    setPushBusy(true);
+    try {
+      if (pushOn) {
+        await disablePush();
+        setPushOn(false);
+        toast.success('Notificaciones desactivadas');
+      } else {
+        const status = await getPushStatus();
+        if (status === 'unsupported') {
+          toast.error('Tu navegador no soporta notificaciones. En iPhone, instala la app desde Safari (Compartir → Añadir a inicio).');
+          return;
+        }
+        const res = await enablePush();
+        if (res.ok) {
+          setPushOn(true);
+          toast.success('Notificaciones activadas en este dispositivo');
+        } else {
+          toast.error(res.reason ?? 'No se pudo activar');
+        }
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  };
 
   const getPerfil = (userId: string) => perfiles.find(p => p.user_id === userId);
 
@@ -121,6 +154,15 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
         setTexto('');
         setArchivo(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
+        // Fire-and-forget push notification to other members
+        supabase.functions.invoke('send-push', {
+          body: {
+            proyecto_id: proyectoId,
+            contenido: texto.trim(),
+            autor_nombre: perfil?.nombre ?? 'Alguien',
+            archivo_nombre: (archivoMeta as ChatMensaje).archivo_nombre ?? null,
+          },
+        }).catch((e) => console.warn('push failed', e));
       }
     } finally {
       setEnviando(false);
