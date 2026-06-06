@@ -17,6 +17,7 @@ interface ChatMensaje {
   archivo_tipo: string | null;
   archivo_tamano: number | null;
   fecha: string;
+  menciones?: string[] | null;
 }
 
 interface Props {
@@ -57,6 +58,79 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
   const [pushBusy, setPushBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mentionMapRef = useRef<Map<string, string>>(new Map()); // token -> user_id
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+
+  const mentionTokenForName = (nombre: string) => '@' + nombre.replace(/\s+/g, '_');
+
+  const mentionCandidates = mentionQuery !== null
+    ? perfiles
+        .filter(p => p.user_id !== user?.id)
+        .filter(p => p.nombre.toLowerCase().includes(mentionQuery.toLowerCase()))
+        .slice(0, 6)
+    : [];
+
+  const handleTextChange = (val: string) => {
+    setTexto(val);
+    const el = textareaRef.current;
+    const caret = el?.selectionStart ?? val.length;
+    const upto = val.slice(0, caret);
+    const m = upto.match(/(?:^|\s)@([\w]*)$/);
+    if (m) {
+      setMentionQuery(m[1]);
+      setMentionIndex(0);
+    } else {
+      setMentionQuery(null);
+    }
+  };
+
+  const insertMention = (perfil: Perfil) => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const caret = el.selectionStart ?? texto.length;
+    const before = texto.slice(0, caret);
+    const after = texto.slice(caret);
+    const newBefore = before.replace(/(?:^|\s)@([\w]*)$/, (full, _q) => {
+      const lead = full.startsWith('@') ? '' : full[0];
+      return lead + mentionTokenForName(perfil.nombre) + ' ';
+    });
+    const newText = newBefore + after;
+    mentionMapRef.current.set(mentionTokenForName(perfil.nombre), perfil.user_id);
+    setTexto(newText);
+    setMentionQuery(null);
+    setTimeout(() => {
+      el.focus();
+      const pos = newBefore.length;
+      el.setSelectionRange(pos, pos);
+    }, 0);
+  };
+
+  const renderContenido = (texto: string, mentionedIds: string[]) => {
+    if (!texto) return null;
+    const mentionedById = new Map(perfiles.filter(p => mentionedIds.includes(p.user_id)).map(p => [p.user_id, p]));
+    const tokenToPerfil = new Map<string, Perfil>();
+    mentionedById.forEach((p) => tokenToPerfil.set(mentionTokenForName(p.nombre), p));
+    const parts = texto.split(/(@[\w_]+)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('@') && tokenToPerfil.has(part)) {
+        const p = tokenToPerfil.get(part)!;
+        const isMe = user?.id === p.user_id;
+        return (
+          <span
+            key={i}
+            className={`inline-flex items-center px-1 rounded font-medium ${
+              isMe ? 'bg-primary/30 text-primary-foreground' : 'bg-primary/15 text-primary'
+            }`}
+          >
+            @{p.nombre}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
 
   const fetchMensajes = async () => {
     const { data } = await supabase
@@ -146,6 +220,9 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
         proyecto_id: proyectoId,
         autor_id: user.id,
         contenido: texto.trim(),
+        menciones: Array.from(mentionMapRef.current.entries())
+          .filter(([token]) => texto.includes(token))
+          .map(([, uid]) => uid),
         ...archivoMeta,
       } as never);
       if (error) {
@@ -153,6 +230,7 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
       } else {
         setTexto('');
         setArchivo(null);
+        mentionMapRef.current.clear();
         if (fileInputRef.current) fileInputRef.current.value = '';
         // Fire-and-forget push notification to other members
         supabase.functions.invoke('send-push', {
@@ -304,7 +382,9 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
                       </button>
                     )}
                     {m.contenido && (
-                      <div className="whitespace-pre-wrap break-words">{m.contenido}</div>
+                      <div className="whitespace-pre-wrap break-words">
+                        {renderContenido(m.contenido, m.menciones ?? [])}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -355,19 +435,46 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
           >
             <Paperclip className="w-4 h-4" />
           </button>
-          <textarea
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend(e as unknown as React.FormEvent);
-              }
-            }}
-            placeholder="Escribe un mensaje..."
-            rows={1}
-            className="flex-1 resize-none min-h-10 max-h-32 px-3 py-2 rounded-md bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+          <div className="flex-1 relative">
+            {mentionQuery !== null && mentionCandidates.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border rounded-md shadow-lg overflow-hidden z-10 max-h-56 overflow-y-auto">
+                {mentionCandidates.map((p, i) => (
+                  <button
+                    key={p.user_id}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); insertMention(p); }}
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-sm transition-colors ${
+                      i === mentionIndex ? 'bg-muted text-foreground' : 'text-foreground/80 hover:bg-muted/60'
+                    }`}
+                  >
+                    <UserAvatar nombre={p.nombre} color={p.color_avatar} avatarUrl={p.avatar_url} size="sm" />
+                    <span className="flex-1 truncate">{p.nombre}</span>
+                    <span className="text-[10px] text-muted-foreground">@{p.nombre.replace(/\s+/g, '_')}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <textarea
+              ref={textareaRef}
+              value={texto}
+              onChange={(e) => handleTextChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (mentionQuery !== null && mentionCandidates.length > 0) {
+                  if (e.key === 'ArrowDown') { e.preventDefault(); setMentionIndex((i) => Math.min(i + 1, mentionCandidates.length - 1)); return; }
+                  if (e.key === 'ArrowUp')   { e.preventDefault(); setMentionIndex((i) => Math.max(i - 1, 0)); return; }
+                  if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertMention(mentionCandidates[mentionIndex]); return; }
+                  if (e.key === 'Escape')   { e.preventDefault(); setMentionQuery(null); return; }
+                }
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend(e as unknown as React.FormEvent);
+                }
+              }}
+              placeholder="Escribe un mensaje… usa @ para mencionar"
+              rows={1}
+              className="w-full resize-none min-h-10 max-h-32 px-3 py-2 rounded-md bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
           <button
             type="submit"
             disabled={enviando || (!texto.trim() && !archivo)}
