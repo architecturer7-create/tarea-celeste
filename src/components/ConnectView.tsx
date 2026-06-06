@@ -17,6 +17,7 @@ interface ChatMensaje {
   archivo_tipo: string | null;
   archivo_tamano: number | null;
   fecha: string;
+  menciones?: string[] | null;
 }
 
 interface Props {
@@ -57,6 +58,79 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
   const [pushBusy, setPushBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mentionMapRef = useRef<Map<string, string>>(new Map()); // token -> user_id
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
+
+  const mentionTokenForName = (nombre: string) => '@' + nombre.replace(/\s+/g, '_');
+
+  const mentionCandidates = mentionQuery !== null
+    ? perfiles
+        .filter(p => p.user_id !== user?.id)
+        .filter(p => p.nombre.toLowerCase().includes(mentionQuery.toLowerCase()))
+        .slice(0, 6)
+    : [];
+
+  const handleTextChange = (val: string) => {
+    setTexto(val);
+    const el = textareaRef.current;
+    const caret = el?.selectionStart ?? val.length;
+    const upto = val.slice(0, caret);
+    const m = upto.match(/(?:^|\s)@([\w]*)$/);
+    if (m) {
+      setMentionQuery(m[1]);
+      setMentionIndex(0);
+    } else {
+      setMentionQuery(null);
+    }
+  };
+
+  const insertMention = (perfil: Perfil) => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const caret = el.selectionStart ?? texto.length;
+    const before = texto.slice(0, caret);
+    const after = texto.slice(caret);
+    const newBefore = before.replace(/(?:^|\s)@([\w]*)$/, (full, _q) => {
+      const lead = full.startsWith('@') ? '' : full[0];
+      return lead + mentionTokenForName(perfil.nombre) + ' ';
+    });
+    const newText = newBefore + after;
+    mentionMapRef.current.set(mentionTokenForName(perfil.nombre), perfil.user_id);
+    setTexto(newText);
+    setMentionQuery(null);
+    setTimeout(() => {
+      el.focus();
+      const pos = newBefore.length;
+      el.setSelectionRange(pos, pos);
+    }, 0);
+  };
+
+  const renderContenido = (texto: string, mentionedIds: string[]) => {
+    if (!texto) return null;
+    const mentionedById = new Map(perfiles.filter(p => mentionedIds.includes(p.user_id)).map(p => [p.user_id, p]));
+    const tokenToPerfil = new Map<string, Perfil>();
+    mentionedById.forEach((p) => tokenToPerfil.set(mentionTokenForName(p.nombre), p));
+    const parts = texto.split(/(@[\w_]+)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('@') && tokenToPerfil.has(part)) {
+        const p = tokenToPerfil.get(part)!;
+        const isMe = user?.id === p.user_id;
+        return (
+          <span
+            key={i}
+            className={`inline-flex items-center px-1 rounded font-medium ${
+              isMe ? 'bg-primary/30 text-primary-foreground' : 'bg-primary/15 text-primary'
+            }`}
+          >
+            @{p.nombre}
+          </span>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
 
   const fetchMensajes = async () => {
     const { data } = await supabase
@@ -146,6 +220,9 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
         proyecto_id: proyectoId,
         autor_id: user.id,
         contenido: texto.trim(),
+        menciones: Array.from(mentionMapRef.current.entries())
+          .filter(([token]) => texto.includes(token))
+          .map(([, uid]) => uid),
         ...archivoMeta,
       } as never);
       if (error) {
@@ -153,6 +230,7 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
       } else {
         setTexto('');
         setArchivo(null);
+        mentionMapRef.current.clear();
         if (fileInputRef.current) fileInputRef.current.value = '';
         // Fire-and-forget push notification to other members
         supabase.functions.invoke('send-push', {
