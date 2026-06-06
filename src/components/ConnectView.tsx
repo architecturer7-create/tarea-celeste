@@ -382,7 +382,9 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
                       </button>
                     )}
                     {m.contenido && (
-                      <div className="whitespace-pre-wrap break-words">{m.contenido}</div>
+                      <div className="whitespace-pre-wrap break-words">
+                        {renderContenido(m.contenido, m.menciones ?? [])}
+                      </div>
                     )}
                   </div>
                 </div>
