@@ -15,6 +15,7 @@ import TimelineView from '@/components/TimelineView';
 import MiroView from '@/components/MiroView';
 import MiroTabButton from '@/components/MiroTabButton';
 import ConnectView from '@/components/ConnectView';
+import AiBotFab from '@/components/AiBotFab';
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -521,6 +522,8 @@ export default function ProjectDetailPage() {
           </div>
         </div>
       )}
+
+      {id && <AiBotFab proyectoId={id} onTasksCreated={fetchData} />}
     </div>
   );
 }
