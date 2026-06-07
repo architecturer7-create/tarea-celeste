@@ -3,6 +3,68 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Perfil } from '@/lib/types';
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+
+// XHR bypasses the Lovable preview fetch proxy that causes "Failed to fetch"
+// on POST /auth/v1/token in the preview iframe.
+function xhrJson(url: string, body: unknown): Promise<{ status: number; data: any }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('apikey', SUPABASE_KEY);
+    xhr.setRequestHeader('Authorization', `Bearer ${SUPABASE_KEY}`);
+    xhr.onload = () => {
+      try {
+        resolve({ status: xhr.status, data: JSON.parse(xhr.responseText || '{}') });
+      } catch {
+        resolve({ status: xhr.status, data: null });
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.send(JSON.stringify(body));
+  });
+}
+
+const isFetchFailure = (err: unknown) => {
+  const msg = (err as { message?: string } | null)?.message?.toLowerCase() ?? '';
+  return msg.includes('failed to fetch') || msg.includes('load failed') || msg.includes('networkerror');
+};
+
+async function signInFallback(email: string, password: string) {
+  const { status, data } = await xhrJson(
+    `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
+    { email, password }
+  );
+  if (status >= 200 && status < 300 && data?.access_token) {
+    const { error } = await supabase.auth.setSession({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+    });
+    return { error: (error as Error | null) ?? null };
+  }
+  return { error: new Error(data?.error_description || data?.msg || 'No se pudo iniciar sesión') };
+}
+
+async function signUpFallback(email: string, password: string, nombre: string) {
+  const { status, data } = await xhrJson(`${SUPABASE_URL}/auth/v1/signup`, {
+    email,
+    password,
+    data: { nombre },
+  });
+  if (status >= 200 && status < 300) {
+    if (data?.access_token && data?.refresh_token) {
+      await supabase.auth.setSession({
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+      });
+    }
+    return { error: null };
+  }
+  return { error: new Error(data?.error_description || data?.msg || 'No se pudo crear la cuenta') };
+}
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -82,17 +144,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error as Error | null };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error && isFetchFailure(error)) {
+        return await signInFallback(email, password);
+      }
+      return { error: error as Error | null };
+    } catch (err) {
+      if (isFetchFailure(err)) {
+        return await signInFallback(email, password);
+      }
+      return { error: err as Error };
+    }
   };
 
   const signUp = async (email: string, password: string, nombre: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { nombre } },
-    });
-    return { error: error as Error | null };
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { nombre } },
+      });
+      if (error && isFetchFailure(error)) {
+        return await signUpFallback(email, password, nombre);
+      }
+      return { error: error as Error | null };
+    } catch (err) {
+      if (isFetchFailure(err)) {
+        return await signUpFallback(email, password, nombre);
+      }
+      return { error: err as Error };
+    }
   };
 
   const signOut = async () => {
