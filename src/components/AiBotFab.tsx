@@ -9,6 +9,8 @@ interface Msg { role: 'user' | 'assistant'; content: string; }
 interface Props {
   proyectoId: string;
   onTasksCreated?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 const SUGGESTIONS = [
