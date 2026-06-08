@@ -82,7 +82,7 @@ export default function AiBotFab({ proyectoId, onTasksCreated, open: openProp, o
 
   return (
     <>
-      {!open && (
+      {!isControlled && !open && (
         <button
           onClick={() => setOpen(true)}
           className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40 h-13 w-13 md:h-14 md:w-14 rounded-full flex items-center justify-center bg-[linear-gradient(135deg,hsl(var(--primary))_0%,hsl(var(--primary))_30%,hsl(0_0%_0%)_100%)] text-primary-foreground shadow-[0_8px_24px_-6px_hsl(var(--primary)/0.6)] hover:scale-105 transition-transform"
