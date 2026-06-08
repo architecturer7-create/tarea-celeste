@@ -523,7 +523,6 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
-      {id && <AiBotFab proyectoId={id} onTasksCreated={fetchData} />}
     </div>
   );
 }
