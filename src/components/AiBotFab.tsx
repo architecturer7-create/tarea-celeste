@@ -12,9 +12,11 @@ interface Props {
 }
 
 const SUGGESTIONS = [
-  'Dame un resumen del proyecto',
-  '¿Qué tareas están bloqueadas o vencidas?',
-  '¿De qué hablamos últimamente en el chat?',
+  'Dame el resumen semanal del proyecto',
+  'Resumen de la sección Sheets',
+  '¿Qué hay en el timeline esta semana?',
+  '¿Tareas bloqueadas o vencidas?',
+  '¿De qué se habló en el chat?',
   'Crea una tarea: revisar planos para mañana',
 ];
 
