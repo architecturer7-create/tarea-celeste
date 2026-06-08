@@ -22,8 +22,14 @@ const SUGGESTIONS = [
   'Crea una tarea: revisar planos para mañana',
 ];
 
-export default function AiBotFab({ proyectoId, onTasksCreated }: Props) {
-  const [open, setOpen] = useState(false);
+export default function AiBotFab({ proyectoId, onTasksCreated, open: openProp, onOpenChange }: Props) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = openProp !== undefined;
+  const open = isControlled ? openProp : uncontrolledOpen;
+  const setOpen = (v: boolean) => {
+    if (!isControlled) setUncontrolledOpen(v);
+    onOpenChange?.(v);
+  };
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
