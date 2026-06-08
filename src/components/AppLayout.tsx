@@ -54,6 +54,16 @@ export default function AppLayout({ children }: Props) {
         </nav>
 
         <div className="flex items-center gap-3">
+          {proyectoId && (
+            <button
+              onClick={() => setAiOpen(true)}
+              className="w-6 h-6 rounded-full flex items-center justify-center bg-[linear-gradient(135deg,hsl(var(--primary))_0%,hsl(0_0%_0%)_100%)] text-primary-foreground hover:scale-105 transition-transform shrink-0"
+              title="Asistente IA"
+              aria-label="Abrir asistente IA"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+            </button>
+          )}
           {perfil && (
             <UserAvatar nombre={perfil.nombre} color={perfil.color_avatar} avatarUrl={perfil.avatar_url} size="sm" />
           )}
