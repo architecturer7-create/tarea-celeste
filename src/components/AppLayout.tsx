@@ -14,6 +14,9 @@ export default function AppLayout({ children }: Props) {
   const { perfil, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [aiOpen, setAiOpen] = useState(false);
+  const proyectoIdMatch = location.pathname.match(/^\/proyecto\/([^/]+)/);
+  const proyectoId = proyectoIdMatch ? proyectoIdMatch[1] : null;
 
   const isActive = (path: string) => location.pathname === path;
 
