@@ -1,9 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, ClipboardList, User } from 'lucide-react';
+import { Home, ClipboardList, User, Sparkles } from 'lucide-react';
 import flowemiLogo from '@/assets/flowemi-logo.png';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/UserAvatar';
+import AiBotFab from '@/components/AiBotFab';
 
 interface Props {
   children: ReactNode;
@@ -13,6 +14,9 @@ export default function AppLayout({ children }: Props) {
   const { perfil, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [aiOpen, setAiOpen] = useState(false);
+  const proyectoIdMatch = location.pathname.match(/^\/proyecto\/([^/]+)/);
+  const proyectoId = proyectoIdMatch ? proyectoIdMatch[1] : null;
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -50,6 +54,16 @@ export default function AppLayout({ children }: Props) {
         </nav>
 
         <div className="flex items-center gap-3">
+          {proyectoId && (
+            <button
+              onClick={() => setAiOpen(true)}
+              className="w-6 h-6 rounded-full flex items-center justify-center bg-[linear-gradient(135deg,hsl(var(--primary))_0%,hsl(0_0%_0%)_100%)] text-primary-foreground hover:scale-105 transition-transform shrink-0"
+              title="Asistente IA"
+              aria-label="Abrir asistente IA"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+            </button>
+          )}
           {perfil && (
             <UserAvatar nombre={perfil.nombre} color={perfil.color_avatar} avatarUrl={perfil.avatar_url} size="sm" />
           )}
@@ -85,6 +99,11 @@ export default function AppLayout({ children }: Props) {
 
       {/* Safe area bottom spacer */}
       <div className="md:hidden shrink-0 bg-background" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }} />
+
+      {/* AI Bot overlay */}
+      {proyectoId && (
+        <AiBotFab proyectoId={proyectoId} open={aiOpen} onOpenChange={setAiOpen} />
+      )}
     </div>
   );
 }
