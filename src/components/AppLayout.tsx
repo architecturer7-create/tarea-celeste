@@ -1,9 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, ClipboardList, User } from 'lucide-react';
+import { Home, ClipboardList, User, Sparkles } from 'lucide-react';
 import flowemiLogo from '@/assets/flowemi-logo.png';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/UserAvatar';
+import AiBotFab from '@/components/AiBotFab';
 
 interface Props {
   children: ReactNode;
