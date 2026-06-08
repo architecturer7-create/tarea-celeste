@@ -99,6 +99,11 @@ export default function AppLayout({ children }: Props) {
 
       {/* Safe area bottom spacer */}
       <div className="md:hidden shrink-0 bg-background" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }} />
+
+      {/* AI Bot overlay */}
+      {proyectoId && (
+        <AiBotFab proyectoId={proyectoId} open={aiOpen} onOpenChange={setAiOpen} />
+      )}
     </div>
   );
 }
