@@ -8,7 +8,11 @@ const corsHeaders = {
 
 const VAPID_PUBLIC_KEY = "BLPBdhEX3udtV8W_bW6RAA5Gb5plKlwktA30gavhicLRUVLUOJ1WaqxQ41r70xvoi-Ad5Di-Krzd3NNrdK4WmmY";
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
-const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT") ?? "mailto:noreply@flowemi.app";
+const RAW_SUBJECT = Deno.env.get("VAPID_SUBJECT") ?? "";
+// VAPID subject MUST be a mailto: or https:// URL. Fall back if invalid.
+const VAPID_SUBJECT = /^(mailto:|https?:\/\/)/i.test(RAW_SUBJECT)
+  ? RAW_SUBJECT
+  : "mailto:noreply@flowemi.app";
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
