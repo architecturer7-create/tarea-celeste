@@ -78,6 +78,12 @@ export default function ProjectDetailPage() {
     return result;
   }, [tareas, filterEstado, filterResponsable]);
 
+  const tareasSinFiltroEstado = useMemo(() => {
+    let result = tareas;
+    if (filterResponsable) result = result.filter(t => t.responsable_id === filterResponsable);
+    return result;
+  }, [tareas, filterResponsable]);
+
   const activeTareas = useMemo(() => filteredTareas.filter(t => t.estado !== 'completada'), [filteredTareas]);
   const completedTareas = useMemo(() => filteredTareas.filter(t => t.estado === 'completada'), [filteredTareas]);
 
@@ -94,11 +100,12 @@ export default function ProjectDetailPage() {
   const [showCompleted, setShowCompleted] = useState(false);
 
   const counts = useMemo(() => ({
-    total: tareas.length,
-    completada: tareas.filter(t => t.estado === 'completada').length,
-    en_progreso: tareas.filter(t => t.estado === 'en_progreso').length,
-    bloqueada: tareas.filter(t => t.estado === 'bloqueada').length,
-  }), [tareas]);
+    total: tareasSinFiltroEstado.length,
+    pendiente: tareasSinFiltroEstado.filter(t => t.estado === 'pendiente').length,
+    en_progreso: tareasSinFiltroEstado.filter(t => t.estado === 'en_progreso').length,
+    bloqueada: tareasSinFiltroEstado.filter(t => t.estado === 'bloqueada').length,
+    completada: tareasSinFiltroEstado.filter(t => t.estado === 'completada').length,
+  }), [tareasSinFiltroEstado]);
 
   const memberProfiles = useMemo(() => {
     return miembros
@@ -330,16 +337,22 @@ export default function ProjectDetailPage() {
           </button>
         </div>
 
-        {/* Counters and filters: stacked on mobile, inline on desktop */}
+        {/* Status filters with counts */}
         {section === 'tareas' && (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-            <span>{counts.total} Total</span>
-            <span className="text-status-completed">{counts.completada} Completadas</span>
-            <span className="text-status-progress">{counts.en_progreso} En progreso</span>
-            <span className="text-status-blocked">{counts.bloqueada} Bloqueadas</span>
-          </div>
           <div className="flex items-center gap-1.5 -mx-3 md:mx-0 px-3 md:px-0 overflow-x-auto flex-nowrap scrollbar-none">
+            <button
+              onClick={() => setFilterEstado(null)}
+              className={`shrink-0 whitespace-nowrap px-2.5 py-1 rounded-full text-[11px] border transition-colors ${
+                filterEstado === null
+                  ? 'border-foreground/20 text-foreground bg-muted'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">Todas</span>
+                <span className="text-[10px] text-muted-foreground/60">{counts.total}</span>
+              </span>
+            </button>
             {(Object.keys(ESTADO_CONFIG) as EstadoTarea[]).map(estado => (
               <button
                 key={estado}
@@ -350,11 +363,10 @@ export default function ProjectDetailPage() {
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
-                <StatusDot estado={estado} showLabel />
+                <StatusDot estado={estado} showLabel count={counts[estado]} />
               </button>
             ))}
           </div>
-        </div>
         )}
       </div>
 
