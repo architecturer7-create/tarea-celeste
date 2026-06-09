@@ -9,6 +9,8 @@ import ProjectsPage from "./pages/ProjectsPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import MyTasksPage from "./pages/MyTasksPage";
 import ProfilePage from "./pages/ProfilePage";
+import MessagesPage from "./pages/MessagesPage";
+import ConversationPage from "./pages/ConversationPage";
 import AppLayout from "./components/AppLayout";
 import NotFound from "./pages/NotFound";
 
@@ -33,6 +35,8 @@ function ProtectedRoutes() {
         <Route path="/" element={<ProjectsPage />} />
         <Route path="/proyecto/:id" element={<ProjectDetailPage />} />
         <Route path="/mis-tareas" element={<MyTasksPage />} />
+        <Route path="/mensajes" element={<MessagesPage />} />
+        <Route path="/mensajes/:id" element={<ConversationPage />} />
         <Route path="/perfil" element={<ProfilePage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
