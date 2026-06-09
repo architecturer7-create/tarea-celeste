@@ -6,6 +6,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import type { Perfil } from '@/lib/types';
 import { toast } from 'sonner';
 import { enablePush, disablePush, isSubscribed, getPushStatus, isPushSupported } from '@/lib/pushNotifications';
+import { markChatSeen } from '@/hooks/useUnreadChat';
 
 interface ChatMensaje {
   id: string;
@@ -77,7 +78,7 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
     const el = textareaRef.current;
     const caret = el?.selectionStart ?? val.length;
     const upto = val.slice(0, caret);
-    const m = upto.match(/(?:^|\s)@([\w]*)$/);
+    const m = upto.match(/(?:^|\s)@([\p{L}\p{N}_]*)$/u);
     if (m) {
       setMentionQuery(m[1]);
       setMentionIndex(0);
@@ -92,7 +93,7 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
     const caret = el.selectionStart ?? texto.length;
     const before = texto.slice(0, caret);
     const after = texto.slice(caret);
-    const newBefore = before.replace(/(?:^|\s)@([\w]*)$/, (full, _q) => {
+    const newBefore = before.replace(/(?:^|\s)@([\p{L}\p{N}_]*)$/u, (full, _q) => {
       const lead = full.startsWith('@') ? '' : full[0];
       return lead + mentionTokenForName(perfil.nombre) + ' ';
     });
@@ -112,7 +113,8 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
     const mentionedById = new Map(perfiles.filter(p => mentionedIds.includes(p.user_id)).map(p => [p.user_id, p]));
     const tokenToPerfil = new Map<string, Perfil>();
     mentionedById.forEach((p) => tokenToPerfil.set(mentionTokenForName(p.nombre), p));
-    const parts = texto.split(/(@[\w_]+)/g);
+    // Allow accented chars (á, é, í, ó, ú, ñ, ü, etc.) in mention tokens
+    const parts = texto.split(/(@[\p{L}\p{N}_]+)/gu);
     return parts.map((part, i) => {
       if (part.startsWith('@') && tokenToPerfil.has(part)) {
         const p = tokenToPerfil.get(part)!;
@@ -120,8 +122,10 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
         return (
           <span
             key={i}
-            className={`inline-flex items-center px-1 rounded font-medium ${
-              isMe ? 'bg-primary/30 text-primary-foreground' : 'bg-primary/15 text-primary'
+            className={`inline-flex items-center px-1 rounded font-semibold ${
+              isMe
+                ? 'bg-amber-400/30 text-amber-200'
+                : 'bg-foreground/15 text-foreground'
             }`}
           >
             @{p.nombre}
@@ -157,7 +161,8 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [mensajes.length]);
+    if (user?.id) markChatSeen(proyectoId, user.id);
+  }, [mensajes.length, user?.id, proyectoId]);
 
   useEffect(() => {
     isSubscribed().then(setPushOn).catch(() => setPushOn(false));
