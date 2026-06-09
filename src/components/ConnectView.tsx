@@ -6,6 +6,7 @@ import { UserAvatar } from '@/components/UserAvatar';
 import type { Perfil } from '@/lib/types';
 import { toast } from 'sonner';
 import { enablePush, disablePush, isSubscribed, getPushStatus, isPushSupported } from '@/lib/pushNotifications';
+import { markChatSeen } from '@/hooks/useUnreadChat';
 
 interface ChatMensaje {
   id: string;
@@ -160,7 +161,8 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [mensajes.length]);
+    if (user?.id) markChatSeen(proyectoId, user.id);
+  }, [mensajes.length, user?.id, proyectoId]);
 
   useEffect(() => {
     isSubscribed().then(setPushOn).catch(() => setPushOn(false));
