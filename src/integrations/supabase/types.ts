@@ -91,6 +91,94 @@ export type Database = {
         }
         Relationships: []
       }
+      conversaciones: {
+        Row: {
+          creado_por: string
+          fecha_creacion: string
+          fecha_ultimo_mensaje: string
+          id: string
+          nombre: string | null
+          tipo: string
+        }
+        Insert: {
+          creado_por: string
+          fecha_creacion?: string
+          fecha_ultimo_mensaje?: string
+          id?: string
+          nombre?: string | null
+          tipo: string
+        }
+        Update: {
+          creado_por?: string
+          fecha_creacion?: string
+          fecha_ultimo_mensaje?: string
+          id?: string
+          nombre?: string | null
+          tipo?: string
+        }
+        Relationships: []
+      }
+      mensajes_conversacion: {
+        Row: {
+          autor_id: string
+          contenido: string
+          conversacion_id: string
+          fecha: string
+          id: string
+        }
+        Insert: {
+          autor_id: string
+          contenido: string
+          conversacion_id: string
+          fecha?: string
+          id?: string
+        }
+        Update: {
+          autor_id?: string
+          contenido?: string
+          conversacion_id?: string
+          fecha?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensajes_conversacion_conversacion_id_fkey"
+            columns: ["conversacion_id"]
+            isOneToOne: false
+            referencedRelation: "conversaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      miembros_conversacion: {
+        Row: {
+          conversacion_id: string
+          fecha_ultima_lectura: string
+          fecha_union: string
+          usuario_id: string
+        }
+        Insert: {
+          conversacion_id: string
+          fecha_ultima_lectura?: string
+          fecha_union?: string
+          usuario_id: string
+        }
+        Update: {
+          conversacion_id?: string
+          fecha_ultima_lectura?: string
+          fecha_union?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "miembros_conversacion_conversacion_id_fkey"
+            columns: ["conversacion_id"]
+            isOneToOne: false
+            referencedRelation: "conversaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       miembros_proyecto: {
         Row: {
           created_at: string
@@ -427,9 +515,21 @@ export type Database = {
         Args: { _email: string; _proyecto_id: string }
         Returns: string
       }
+      crear_chat_directo: {
+        Args: { _otro_usuario_id: string }
+        Returns: string
+      }
+      crear_grupo: {
+        Args: { _miembros: string[]; _nombre: string }
+        Returns: string
+      }
       crear_proyecto: {
         Args: { _color: string; _nombre: string }
         Returns: string
+      }
+      es_miembro_conversacion: {
+        Args: { _conv_id: string; _user_id: string }
+        Returns: boolean
       }
       is_project_member: {
         Args: { _proyecto_id: string; _user_id: string }
