@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, ClipboardList, User, Sparkles } from 'lucide-react';
+import { Home, ClipboardList, User, Sparkles, MessageCircle } from 'lucide-react';
 import flowemiLogo from '@/assets/flowemi-logo.png';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -22,6 +22,7 @@ export default function AppLayout({ children }: Props) {
 
   const tabs = [
     { path: '/', icon: Home, label: 'Inicio' },
+    { path: '/mensajes', icon: MessageCircle, label: 'Mensajes' },
     { path: '/mis-tareas', icon: ClipboardList, label: 'Mis Tareas' },
     { path: '/perfil', icon: User, label: 'Perfil' },
   ];
