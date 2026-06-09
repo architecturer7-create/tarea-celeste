@@ -80,6 +80,13 @@
   .glass-panel {
     @apply bg-card backdrop-blur-sm;
   }
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
   .glow-primary {
     box-shadow: 0 0 20px hsl(220 40% 20% / 0.15);
   }
