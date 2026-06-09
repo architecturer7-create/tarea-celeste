@@ -78,6 +78,12 @@ export default function ProjectDetailPage() {
     return result;
   }, [tareas, filterEstado, filterResponsable]);
 
+  const tareasSinFiltroEstado = useMemo(() => {
+    let result = tareas;
+    if (filterResponsable) result = result.filter(t => t.responsable_id === filterResponsable);
+    return result;
+  }, [tareas, filterResponsable]);
+
   const activeTareas = useMemo(() => filteredTareas.filter(t => t.estado !== 'completada'), [filteredTareas]);
   const completedTareas = useMemo(() => filteredTareas.filter(t => t.estado === 'completada'), [filteredTareas]);
 
@@ -94,11 +100,12 @@ export default function ProjectDetailPage() {
   const [showCompleted, setShowCompleted] = useState(false);
 
   const counts = useMemo(() => ({
-    total: tareas.length,
-    completada: tareas.filter(t => t.estado === 'completada').length,
-    en_progreso: tareas.filter(t => t.estado === 'en_progreso').length,
-    bloqueada: tareas.filter(t => t.estado === 'bloqueada').length,
-  }), [tareas]);
+    total: tareasSinFiltroEstado.length,
+    pendiente: tareasSinFiltroEstado.filter(t => t.estado === 'pendiente').length,
+    en_progreso: tareasSinFiltroEstado.filter(t => t.estado === 'en_progreso').length,
+    bloqueada: tareasSinFiltroEstado.filter(t => t.estado === 'bloqueada').length,
+    completada: tareasSinFiltroEstado.filter(t => t.estado === 'completada').length,
+  }), [tareasSinFiltroEstado]);
 
   const memberProfiles = useMemo(() => {
     return miembros
