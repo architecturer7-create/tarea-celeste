@@ -15,6 +15,7 @@ import TimelineView from '@/components/TimelineView';
 import MiroView from '@/components/MiroView';
 import MiroTabButton from '@/components/MiroTabButton';
 import ConnectView from '@/components/ConnectView';
+import { useUnreadChat } from '@/hooks/useUnreadChat';
 
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { Trash2 } from 'lucide-react';
@@ -39,6 +40,8 @@ export default function ProjectDetailPage() {
   const [filterEstado, setFilterEstado] = useState<EstadoTarea | null>(null);
   const [filterResponsable, setFilterResponsable] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const unreadChat = useUnreadChat(id ?? null, user?.id ?? null, section === 'connect');
 
   const fetchData = async () => {
     if (!id) return;
@@ -270,6 +273,11 @@ export default function ProjectDetailPage() {
             }`}
           >
             <MessageCircle className="w-3.5 h-3.5" /> Connect
+            {unreadChat > 0 && (
+              <span className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-amber-400 text-[10px] font-bold text-black leading-none">
+                {unreadChat > 99 ? '99+' : unreadChat}
+              </span>
+            )}
           </button>
         </div>
 
