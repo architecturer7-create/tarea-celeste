@@ -112,7 +112,8 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
     const mentionedById = new Map(perfiles.filter(p => mentionedIds.includes(p.user_id)).map(p => [p.user_id, p]));
     const tokenToPerfil = new Map<string, Perfil>();
     mentionedById.forEach((p) => tokenToPerfil.set(mentionTokenForName(p.nombre), p));
-    const parts = texto.split(/(@[\w_]+)/g);
+    // Allow accented chars (á, é, í, ó, ú, ñ, ü, etc.) in mention tokens
+    const parts = texto.split(/(@[\p{L}\p{N}_]+)/gu);
     return parts.map((part, i) => {
       if (part.startsWith('@') && tokenToPerfil.has(part)) {
         const p = tokenToPerfil.get(part)!;
@@ -120,8 +121,10 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
         return (
           <span
             key={i}
-            className={`inline-flex items-center px-1 rounded font-medium ${
-              isMe ? 'bg-primary/30 text-primary-foreground' : 'bg-primary/15 text-primary'
+            className={`inline-flex items-center px-1 rounded font-semibold ${
+              isMe
+                ? 'bg-amber-400/30 text-amber-200'
+                : 'bg-foreground/15 text-foreground'
             }`}
           >
             @{p.nombre}
