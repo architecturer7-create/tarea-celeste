@@ -1,70 +1,80 @@
 
+# Plan — Mensajes globales (Fase 1 / MVP)
+
 ## Objetivo
-Ajustar la app para que se vea pulida y cómoda en iPhone 17 (viewport ~402×874, Dynamic Island, gesture bar), corrigiendo problemas detectados al revisar la versión móvil.
+Nueva sección **Mensajes** en el menú principal (junto a Inicio, Mis Tareas, Perfil) tipo LINE/WhatsApp, con:
+- Chats 1‑a‑1 entre cualquier par de usuarios registrados.
+- Grupos creados libremente con cualquier usuario registrado.
+- Los chats de proyecto (Connect actual) aparecen también en esta bandeja como conversación "de proyecto", para enterarse sin entrar al proyecto.
+- El Connect dentro del proyecto sigue funcionando exactamente igual (misma tabla, mismos mensajes).
 
-## Problemas detectados (en preview móvil 402px)
+## Alcance Fase 1
+Incluye:
+- Lista unificada de conversaciones (1‑a‑1, grupos, proyectos) ordenada por último mensaje, con preview, hora y contador de no leídos.
+- Apertura de conversación: mensajes en tiempo real, envío de texto, autoscroll, burbujas estilo Connect actual.
+- Crear chat 1‑a‑1: buscador de usuarios por nombre/email.
+- Crear grupo: nombre + selección múltiple de miembros, salir del grupo, renombrar (solo creador).
+- Contador de no leídos por conversación y badge global en la pestaña.
+- Los chats de proyecto se muestran con el color/nombre del proyecto y al abrirlos navegan al Connect del proyecto (reutilizando lo ya hecho), sin duplicar UI.
 
-1. **Pestañas de sección del proyecto** (Tareas / Sheets / Timeline / Miro / Connect) se aprietan; el badge de no leídos en "Connect" desborda hacia la derecha y, con proyectos largos, se rompe la línea.
-2. **Filtros de estado** (Pendiente / En progreso / Bloqueada / Completada) hacen wrap a 2 líneas y "En progreso" parte en dos.
-3. **Contadores** (Total / Completadas / En progreso / Bloqueadas) compiten con las pastillas en la misma fila → wrap caótico.
-4. **Header del proyecto**: avatares + invitar + toggle lista/kanban + nombre del proyecto saturan la fila a 390–402px.
-5. **Tipografías muy pequeñas** (10–11px) en contadores, fechas y prioridades → poco legibles en iPhone 17.
-6. **Targets táctiles pequeños** (iconos w-3.5 h-3.5, botones p-1.5) por debajo del mínimo recomendado de 44px de Apple.
-7. **Safe area superior**: hoy se respeta con `env(safe-area-inset-top)` pero el header tiene `h-10` y queda muy pegado a la Dynamic Island; conviene un mínimo extra.
-8. **FAB de crear tarea** queda demasiado cerca de la tab bar inferior cuando hay safe-area-inset-bottom (gesture bar).
-9. **Vistas Sheets / Timeline / Connect**: revisar padding lateral y scroll horizontal a 402px.
-10. **Modales** (`CreateTaskModal`, `TaskDetailDrawer`, invitar miembro): revisar que no excedan el viewport y respeten safe areas.
+No incluye (fases siguientes): adjuntos en chats globales, reacciones, edición, indicador "escribiendo…", llamadas, búsqueda dentro de chat, notificaciones push (se puede sumar luego usando la infra ya existente).
 
-## Cambios propuestos
+## Cambios de datos (backend)
 
-### A. Header global (`src/components/AppLayout.tsx`)
-- Subir la altura del header a `h-11` en móvil y aumentar el logo a `w-7 h-7`.
-- Aumentar el botón IA y el avatar a `w-8 h-8` para cumplir tap target.
-- Aumentar el spacer superior a `max(env(safe-area-inset-top), 8px)` para que no choque con la Dynamic Island.
-- Tab bar inferior: subir a `h-14`, iconos `w-5 h-5`, label `text-[10px]`.
+Tablas nuevas en `public`:
 
-### B. Header de proyecto (`src/pages/ProjectDetailPage.tsx`)
-- Reorganizar la fila superior: nombre del proyecto + back en una línea; **avatares, invitar y vista lista/kanban** se mueven a una segunda línea en móvil (md: vuelven a inline).
-- **Pestañas de sección**: convertir en scroll horizontal (`overflow-x-auto`, `flex-nowrap`, `snap-x`), tamaño `text-xs`, padding `px-3 py-1.5`, y mantener el badge de Connect inline sin romper.
-- **Contadores y filtros**: separar en dos filas en móvil (contadores arriba, filtros abajo en scroll horizontal). Subir tipografías a `text-[11px]` / `text-xs`.
-- Aumentar iconos del header (back, invitar, toggles) a `w-5 h-5` y padding `p-2`.
+1. `conversaciones`
+   - `id`, `tipo` (`directo` | `grupo`), `nombre` (solo grupos), `creado_por`, `fecha_creacion`, `fecha_ultimo_mensaje`.
+2. `miembros_conversacion`
+   - `conversacion_id`, `usuario_id`, `fecha_union`, `fecha_ultima_lectura`. PK compuesta.
+3. `mensajes_conversacion`
+   - `id`, `conversacion_id`, `autor_id`, `contenido`, `fecha`.
 
-### C. Lista de tareas
-- Checkbox circular a `w-5 h-5`, avatar `size="sm"` ya OK.
-- Pastilla de prioridad a `text-[11px] px-2 py-0.5`.
-- Filas con `py-3` para mejor tap target.
+Reglas:
+- RLS estricta: solo miembros de la conversación leen/escriben sus mensajes.
+- Función `es_miembro_conversacion(_user, _conv)` SECURITY DEFINER para evitar recursión.
+- RPC `crear_chat_directo(_otro_usuario_id)` que devuelve la conversación existente o crea una nueva (evita duplicados de 1‑a‑1).
+- RPC `crear_grupo(_nombre, _miembros uuid[])` que crea la conversación + inserta miembros + añade al creador.
+- Trigger en `mensajes_conversacion` que actualiza `fecha_ultimo_mensaje` de la conversación.
+- `ALTER PUBLICATION supabase_realtime ADD TABLE` para `mensajes_conversacion` y `miembros_conversacion`.
+- GRANTs `SELECT/INSERT/UPDATE/DELETE` a `authenticated` y `ALL` a `service_role` en las tres tablas.
 
-### D. FAB y safe-area
-- Mover el FAB de crear tarea a `bottom: calc(env(safe-area-inset-bottom) + 72px)` para separarlo de la tab bar inferior en iPhone 17.
-- Añadir utilidad `.safe-bottom-tabs` para el contenido principal y respetar gesture bar.
+Bandeja unificada (sin tabla adicional):
+- La lista combina en el cliente:
+  - Conversaciones donde el usuario es miembro (`miembros_conversacion`).
+  - Proyectos donde el usuario es miembro (`miembros_proyecto`) — para mostrar el Connect del proyecto.
+- Para los proyectos se reutiliza `chat_mensajes` (último mensaje + no leídos basados en el `localStorage` ya usado por `useUnreadChat`).
 
-### E. Tab bar inferior y safe area
-- Reemplazar el spacer fijo por `padding-bottom: max(env(safe-area-inset-bottom), 0px)` dentro del `<nav>` (no como div extra) para que el fondo siga siendo continuo.
-- Header: aplicar el mismo patrón con `padding-top: max(env(safe-area-inset-top), 0px)`.
+## Cambios de frontend
 
-### F. Vistas internas
-- `SheetsView`, `TimelineView`, `ConnectView`: revisar y limitar `px` lateral a `px-3` en móvil; en `TimelineView` envolver la tabla/canvas en `overflow-x-auto` con `min-w-[640px]`.
-- `ConnectView`: input de mensaje fijo abajo con `pb-[env(safe-area-inset-bottom)]`.
+Rutas nuevas en `src/App.tsx`:
+- `/mensajes` → `MessagesPage` (lista).
+- `/mensajes/:conversacionId` → `ConversationPage` (chat 1‑a‑1 o grupo).
+- Los proyectos no necesitan ruta nueva: desde la lista se navega a `/proyecto/:id` y se abre el tab Connect.
 
-### G. Modales / Drawers
-- `CreateTaskModal` y `TaskDetailDrawer`: `max-h-[90dvh]`, scroll interno, padding inferior con safe area.
-- Diálogo de invitar miembro: ancho `w-[calc(100vw-2rem)] max-w-sm`.
+Nuevos archivos:
+- `src/pages/MessagesPage.tsx` — bandeja unificada con tabs opcionales (Todos / Directos / Grupos / Proyectos) o lista única ordenada.
+- `src/pages/ConversationPage.tsx` — vista de chat reutilizando estilo de `ConnectView`.
+- `src/components/NewChatModal.tsx` — crear 1‑a‑1 (buscador de usuarios).
+- `src/components/NewGroupModal.tsx` — crear grupo (nombre + multi‑select).
+- `src/hooks/useConversations.ts` — fetch + realtime de conversaciones del usuario.
+- `src/hooks/useConversationMessages.ts` — fetch + realtime de mensajes y marcar como leído (actualizando `fecha_ultima_lectura`).
+- `src/hooks/useGlobalUnread.ts` — agrega no leídos de todas las conversaciones + chats de proyecto para el badge global.
 
-## Detalles técnicos
-- Solo cambios de UI/CSS (Tailwind) y reorganización JSX. No se toca lógica de negocio, queries ni Supabase.
-- Se respeta el design system existente (tokens HSL en `index.css`, no se introducen colores nuevos).
-- Se conservan los tamaños desktop (`md:` prefijos) intactos; los ajustes son solo para móvil.
+Cambios en archivos existentes:
+- `src/components/AppLayout.tsx`: añadir tab "Mensajes" (icono `MessageCircle`) en nav desktop y bottom nav móvil, con badge de no leídos global.
+- (Opcional menor) Sin cambios en `ConnectView.tsx`.
 
-## Archivos a tocar
-- `src/components/AppLayout.tsx`
-- `src/pages/ProjectDetailPage.tsx`
-- `src/components/ConnectView.tsx`
-- `src/components/SheetsView.tsx`
-- `src/components/TimelineView.tsx`
-- `src/components/CreateTaskModal.tsx`
-- `src/components/TaskDetailDrawer.tsx`
-- `src/index.css` (utilidades de safe-area)
+## UX
+- Lista: avatar (UserAvatar para directos, iniciales/grupo para grupos, color del proyecto para Connect), nombre, preview del último mensaje, hora relativa, contador no leídos.
+- Conversación: header con nombre + miembros (en grupo), burbujas idénticas a Connect, input fijo abajo, safe‑area iOS.
+- Crear: FAB "+" en `MessagesPage` con dos opciones (Nuevo chat / Nuevo grupo).
+- Idioma: todo en español. Estética dark futurista existente.
 
-## Verificación
-- Capturar screenshots a 402×874 (iPhone 17), 390×844 (iPhone 16) y 768×1024 (iPad) y revisar cada vista (Inicio, Mis Tareas, Proyecto: Tareas / Sheets / Timeline / Miro / Connect, Perfil).
-- Confirmar que no haya overflow horizontal y que los tap targets sean ≥40px.
+## Riesgos / consideraciones
+- Bandeja unificada hace dos queries (conversaciones + proyectos) y las mezcla en cliente — sencillo y suficiente para el volumen actual.
+- No leídos de proyectos siguen viviendo en `localStorage` (consistente con lo actual); migrar a server side queda para fase 2.
+- RLS de mensajes_conversacion usa función security definer para evitar recursión con `miembros_conversacion`.
+
+## Entregable Fase 1
+Sección Mensajes operativa con 1‑a‑1, grupos, vista de chats de proyecto en la misma bandeja, realtime, contador global, sin tocar el Connect actual.
