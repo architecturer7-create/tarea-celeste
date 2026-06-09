@@ -29,13 +29,13 @@ export default function AppLayout({ children }: Props) {
   return (
     <div className="h-dvh flex flex-col bg-background">
       {/* Safe area top spacer */}
-      <div className="shrink-0 bg-background" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }} />
+      <div className="shrink-0 bg-background" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 6px)' }} />
 
       {/* Top header */}
-      <header className="h-10 md:h-12 border-b border-border flex items-center justify-between px-3 md:px-4 shrink-0">
+      <header className="h-12 md:h-12 border-b border-border flex items-center justify-between px-3 md:px-4 shrink-0">
         <div className="flex items-center gap-1.5">
-          <img src={flowemiLogo} alt="SP Planning logo" width={28} height={28} className="w-6 h-6 md:w-7 md:h-7 rounded-lg" />
-          <span className="text-xs md:text-sm font-semibold text-foreground tracking-tight">SP Planning</span>
+          <img src={flowemiLogo} alt="SP Planning logo" width={28} height={28} className="w-7 h-7 rounded-lg" />
+          <span className="text-sm font-semibold text-foreground tracking-tight">SP Planning</span>
         </div>
 
         {/* Desktop nav */}
@@ -53,19 +53,21 @@ export default function AppLayout({ children }: Props) {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           {proyectoId && (
             <button
               onClick={() => setAiOpen(true)}
-              className="w-6 h-6 rounded-full flex items-center justify-center bg-[linear-gradient(135deg,hsl(var(--primary))_0%,hsl(0_0%_0%)_100%)] text-primary-foreground hover:scale-105 transition-transform shrink-0"
+              className="w-8 h-8 rounded-full flex items-center justify-center bg-[linear-gradient(135deg,hsl(var(--primary))_0%,hsl(0_0%_0%)_100%)] text-primary-foreground hover:scale-105 transition-transform shrink-0"
               title="Asistente IA"
               aria-label="Abrir asistente IA"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-4 h-4" />
             </button>
           )}
           {perfil && (
-            <UserAvatar nombre={perfil.nombre} color={perfil.color_avatar} avatarUrl={perfil.avatar_url} size="sm" />
+            <button onClick={() => navigate('/perfil')} className="shrink-0" aria-label="Ir a perfil">
+              <UserAvatar nombre={perfil.nombre} color={perfil.color_avatar} avatarUrl={perfil.avatar_url} size="sm" />
+            </button>
           )}
           <button onClick={signOut} className="hidden md:block text-xs text-muted-foreground hover:text-foreground transition-colors">
             Cerrar sesión
@@ -79,19 +81,19 @@ export default function AppLayout({ children }: Props) {
       </main>
 
       {/* Mobile bottom tabs */}
-      <nav className="md:hidden border-t border-border flex items-center justify-around h-12 shrink-0 bg-background">
+      <nav className="md:hidden border-t border-border flex items-center justify-around h-14 shrink-0 bg-background">
         {tabs.map(tab => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.path}
               onClick={() => navigate(tab.path)}
-              className={`flex flex-col items-center gap-0.5 py-0.5 px-3 transition-colors ${
+              className={`flex flex-col items-center gap-1 py-1 px-4 transition-colors ${
                 isActive(tab.path) ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
-              <Icon className="w-4 h-4" />
-              <span className="text-[9px]">{tab.label}</span>
+              <Icon className="w-5 h-5" />
+              <span className="text-[10px]">{tab.label}</span>
             </button>
           );
         })}
