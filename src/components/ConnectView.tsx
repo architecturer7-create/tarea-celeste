@@ -77,7 +77,7 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
     const el = textareaRef.current;
     const caret = el?.selectionStart ?? val.length;
     const upto = val.slice(0, caret);
-    const m = upto.match(/(?:^|\s)@([\w]*)$/);
+    const m = upto.match(/(?:^|\s)@([\p{L}\p{N}_]*)$/u);
     if (m) {
       setMentionQuery(m[1]);
       setMentionIndex(0);
@@ -92,7 +92,7 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
     const caret = el.selectionStart ?? texto.length;
     const before = texto.slice(0, caret);
     const after = texto.slice(caret);
-    const newBefore = before.replace(/(?:^|\s)@([\w]*)$/, (full, _q) => {
+    const newBefore = before.replace(/(?:^|\s)@([\p{L}\p{N}_]*)$/u, (full, _q) => {
       const lead = full.startsWith('@') ? '' : full[0];
       return lead + mentionTokenForName(perfil.nombre) + ' ';
     });
