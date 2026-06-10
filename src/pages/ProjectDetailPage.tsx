@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks, CalendarRange, SquareDashedKanban, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,13 +24,28 @@ import { toast } from 'sonner';
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const [proyecto, setProyecto] = useState<Proyecto | null>(null);
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [miembros, setMiembros] = useState<MiembroProyecto[]>([]);
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [view, setView] = useState<'list' | 'kanban'>('list');
-  const [section, setSection] = useState<'tareas' | 'sheets' | 'timeline' | 'miro' | 'connect'>('tareas');
+  const [section, setSection] = useState<'tareas' | 'sheets' | 'timeline' | 'miro' | 'connect'>(() => {
+    const t = searchParams.get('tab');
+    if (t === 'connect' || t === 'sheets' || t === 'timeline' || t === 'miro' || t === 'tareas') return t;
+    return 'tareas';
+  });
+
+  useEffect(() => {
+    const t = searchParams.get('tab');
+    if (t && t !== section) {
+      if (t === 'connect' || t === 'sheets' || t === 'timeline' || t === 'miro' || t === 'tareas') {
+        setSection(t);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [miroActiveId, setMiroActiveId] = useState<string | null>(null);
   const [miroAction, setMiroAction] = useState<'create' | null>(null);
   const [selectedTask, setSelectedTask] = useState<Tarea | null>(null);
