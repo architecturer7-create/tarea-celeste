@@ -120,22 +120,34 @@ export type Database = {
       }
       mensajes_conversacion: {
         Row: {
+          archivo_nombre: string | null
+          archivo_path: string | null
+          archivo_tamano: number | null
+          archivo_tipo: string | null
           autor_id: string
-          contenido: string
+          contenido: string | null
           conversacion_id: string
           fecha: string
           id: string
         }
         Insert: {
+          archivo_nombre?: string | null
+          archivo_path?: string | null
+          archivo_tamano?: number | null
+          archivo_tipo?: string | null
           autor_id: string
-          contenido: string
+          contenido?: string | null
           conversacion_id: string
           fecha?: string
           id?: string
         }
         Update: {
+          archivo_nombre?: string | null
+          archivo_path?: string | null
+          archivo_tamano?: number | null
+          archivo_tipo?: string | null
           autor_id?: string
-          contenido?: string
+          contenido?: string | null
           conversacion_id?: string
           fecha?: string
           id?: string
