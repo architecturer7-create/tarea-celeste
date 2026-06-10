@@ -1,80 +1,51 @@
+# Notificaciones globales de mensajes
 
-# Plan — Mensajes globales (Fase 1 / MVP)
+Objetivo: que desde cualquier pantalla de la app el usuario vea (1) un contador global de mensajes no leídos en la pestaña **Mensajes**, y (2) un toast emergente cuando llegue un mensaje nuevo, que al tocarlo abra la conversación correspondiente.
 
-## Objetivo
-Nueva sección **Mensajes** en el menú principal (junto a Inicio, Mis Tareas, Perfil) tipo LINE/WhatsApp, con:
-- Chats 1‑a‑1 entre cualquier par de usuarios registrados.
-- Grupos creados libremente con cualquier usuario registrado.
-- Los chats de proyecto (Connect actual) aparecen también en esta bandeja como conversación "de proyecto", para enterarse sin entrar al proyecto.
-- El Connect dentro del proyecto sigue funcionando exactamente igual (misma tabla, mismos mensajes).
+## Alcance
 
-## Alcance Fase 1
-Incluye:
-- Lista unificada de conversaciones (1‑a‑1, grupos, proyectos) ordenada por último mensaje, con preview, hora y contador de no leídos.
-- Apertura de conversación: mensajes en tiempo real, envío de texto, autoscroll, burbujas estilo Connect actual.
-- Crear chat 1‑a‑1: buscador de usuarios por nombre/email.
-- Crear grupo: nombre + selección múltiple de miembros, salir del grupo, renombrar (solo creador).
-- Contador de no leídos por conversación y badge global en la pestaña.
-- Los chats de proyecto se muestran con el color/nombre del proyecto y al abrirlos navegan al Connect del proyecto (reutilizando lo ya hecho), sin duplicar UI.
+Cubre los 3 tipos de chat que ya existen:
+- Chats directos 1-a-1 (`mensajes_conversacion` tipo `directo`)
+- Grupos personalizados (`mensajes_conversacion` tipo `grupo`)
+- Connect de cada proyecto (`chat_mensajes`)
 
-No incluye (fases siguientes): adjuntos en chats globales, reacciones, edición, indicador "escribiendo…", llamadas, búsqueda dentro de chat, notificaciones push (se puede sumar luego usando la infra ya existente).
+No incluye notificaciones push del sistema operativo (eso ya existe aparte vía `send-push`). Esto es solo dentro de la app abierta.
 
-## Cambios de datos (backend)
+## 1. Badge global en la pestaña "Mensajes"
 
-Tablas nuevas en `public`:
+- Nuevo hook `useGlobalUnread()` montado en `AppLayout` (vive mientras la app está abierta).
+- Calcula no leídos sumando:
+  - **Conversaciones globales:** para cada conversación donde soy miembro, cuenta mensajes con `fecha > miembros_conversacion.fecha_ultima_lectura` y `autor_id <> yo`.
+  - **Connect de proyectos:** para cada proyecto donde soy miembro, cuenta `chat_mensajes` con `fecha > last_seen_local` y `autor_id <> yo` (reusa el `localStorage` que ya usa `useUnreadChat`).
+- Se actualiza en tiempo real suscribiéndose a `INSERT` en `mensajes_conversacion` y `chat_mensajes` mediante un canal Realtime único.
+- Cuando estás dentro de una conversación, esa conversación deja de contar (la página ya marca como leído).
+- El badge se muestra como punto rojo con número (máx. "9+") junto al ícono "Mensajes" en la barra inferior (móvil) y en la nav superior (desktop) dentro de `AppLayout.tsx`.
 
-1. `conversaciones`
-   - `id`, `tipo` (`directo` | `grupo`), `nombre` (solo grupos), `creado_por`, `fecha_creacion`, `fecha_ultimo_mensaje`.
-2. `miembros_conversacion`
-   - `conversacion_id`, `usuario_id`, `fecha_union`, `fecha_ultima_lectura`. PK compuesta.
-3. `mensajes_conversacion`
-   - `id`, `conversacion_id`, `autor_id`, `contenido`, `fecha`.
+## 2. Toast emergente con navegación
 
-Reglas:
-- RLS estricta: solo miembros de la conversación leen/escriben sus mensajes.
-- Función `es_miembro_conversacion(_user, _conv)` SECURITY DEFINER para evitar recursión.
-- RPC `crear_chat_directo(_otro_usuario_id)` que devuelve la conversación existente o crea una nueva (evita duplicados de 1‑a‑1).
-- RPC `crear_grupo(_nombre, _miembros uuid[])` que crea la conversación + inserta miembros + añade al creador.
-- Trigger en `mensajes_conversacion` que actualiza `fecha_ultimo_mensaje` de la conversación.
-- `ALTER PUBLICATION supabase_realtime ADD TABLE` para `mensajes_conversacion` y `miembros_conversacion`.
-- GRANTs `SELECT/INSERT/UPDATE/DELETE` a `authenticated` y `ALL` a `service_role` en las tres tablas.
+- En el mismo hook, cuando llegue un `INSERT` nuevo:
+  - Ignorar si el autor soy yo.
+  - Ignorar si ya estoy viendo esa conversación (ruta actual `/mensajes/:id` o `/proyecto/:id?tab=connect`).
+  - Resolver nombre del remitente y vista previa del mensaje (primeros ~80 caracteres).
+  - Mostrar `toast()` de **sonner** con título (nombre del chat o remitente), descripción (preview) y acción "Ver" que navega a:
+    - `/mensajes/<conversacion_id>` para chats directos/grupos
+    - `/proyecto/<proyecto_id>?tab=connect` para Connect
+  - Tocar el cuerpo del toast también navega (handler en `onClick`).
+- Para evitar spam, agrupar: si llegan varios mensajes de la misma conversación en <5 s, se actualiza el mismo toast en vez de apilar varios.
 
-Bandeja unificada (sin tabla adicional):
-- La lista combina en el cliente:
-  - Conversaciones donde el usuario es miembro (`miembros_conversacion`).
-  - Proyectos donde el usuario es miembro (`miembros_proyecto`) — para mostrar el Connect del proyecto.
-- Para los proyectos se reutiliza `chat_mensajes` (último mensaje + no leídos basados en el `localStorage` ya usado por `useUnreadChat`).
+## Cambios técnicos
 
-## Cambios de frontend
+- **Nuevos archivos:**
+  - `src/hooks/useGlobalUnread.ts` — suscripciones Realtime + cálculo global + emisión de toasts.
+- **Archivos editados:**
+  - `src/components/AppLayout.tsx` — montar el hook, renderizar badge en el tab "Mensajes" (móvil y desktop).
+  - `src/pages/ConversationPage.tsx` — exponer "estoy viendo X" vía el pathname (ya lo hace; basta con leer `useLocation` desde el hook, sin cambios reales).
+  - `src/hooks/useUnreadChat.ts` — exportar helper para listar proyectos con `last_seen` (opcional, puede quedar autoincluido en el nuevo hook).
+- **Migración Supabase:** habilitar Realtime para `mensajes_conversacion` y `chat_mensajes` (añadirlas a `supabase_realtime` publication si no lo están).
 
-Rutas nuevas en `src/App.tsx`:
-- `/mensajes` → `MessagesPage` (lista).
-- `/mensajes/:conversacionId` → `ConversationPage` (chat 1‑a‑1 o grupo).
-- Los proyectos no necesitan ruta nueva: desde la lista se navega a `/proyecto/:id` y se abre el tab Connect.
+## Consideraciones
 
-Nuevos archivos:
-- `src/pages/MessagesPage.tsx` — bandeja unificada con tabs opcionales (Todos / Directos / Grupos / Proyectos) o lista única ordenada.
-- `src/pages/ConversationPage.tsx` — vista de chat reutilizando estilo de `ConnectView`.
-- `src/components/NewChatModal.tsx` — crear 1‑a‑1 (buscador de usuarios).
-- `src/components/NewGroupModal.tsx` — crear grupo (nombre + multi‑select).
-- `src/hooks/useConversations.ts` — fetch + realtime de conversaciones del usuario.
-- `src/hooks/useConversationMessages.ts` — fetch + realtime de mensajes y marcar como leído (actualizando `fecha_ultima_lectura`).
-- `src/hooks/useGlobalUnread.ts` — agrega no leídos de todas las conversaciones + chats de proyecto para el badge global.
-
-Cambios en archivos existentes:
-- `src/components/AppLayout.tsx`: añadir tab "Mensajes" (icono `MessageCircle`) en nav desktop y bottom nav móvil, con badge de no leídos global.
-- (Opcional menor) Sin cambios en `ConnectView.tsx`.
-
-## UX
-- Lista: avatar (UserAvatar para directos, iniciales/grupo para grupos, color del proyecto para Connect), nombre, preview del último mensaje, hora relativa, contador no leídos.
-- Conversación: header con nombre + miembros (en grupo), burbujas idénticas a Connect, input fijo abajo, safe‑area iOS.
-- Crear: FAB "+" en `MessagesPage` con dos opciones (Nuevo chat / Nuevo grupo).
-- Idioma: todo en español. Estética dark futurista existente.
-
-## Riesgos / consideraciones
-- Bandeja unificada hace dos queries (conversaciones + proyectos) y las mezcla en cliente — sencillo y suficiente para el volumen actual.
-- No leídos de proyectos siguen viviendo en `localStorage` (consistente con lo actual); migrar a server side queda para fase 2.
-- RLS de mensajes_conversacion usa función security definer para evitar recursión con `miembros_conversacion`.
-
-## Entregable Fase 1
-Sección Mensajes operativa con 1‑a‑1, grupos, vista de chats de proyecto en la misma bandeja, realtime, contador global, sin tocar el Connect actual.
+- El hook solo corre cuando hay sesión iniciada (chequea `useAuth().user`).
+- Las suscripciones se limpian al desmontar o al cerrar sesión.
+- RLS ya filtra: el cliente solo recibe eventos de conversaciones donde es miembro y de proyectos donde pertenece.
+- Idioma: textos del toast en español ("Nuevo mensaje", "Ver", etc.).

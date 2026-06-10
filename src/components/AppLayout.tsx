@@ -5,6 +5,7 @@ import flowemiLogo from '@/assets/flowemi-logo.png';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/UserAvatar';
 import AiBotFab from '@/components/AiBotFab';
+import { useGlobalUnread } from '@/hooks/useGlobalUnread';
 
 interface Props {
   children: ReactNode;
@@ -17,6 +18,7 @@ export default function AppLayout({ children }: Props) {
   const [aiOpen, setAiOpen] = useState(false);
   const proyectoIdMatch = location.pathname.match(/^\/proyecto\/([^/]+)/);
   const proyectoId = proyectoIdMatch ? proyectoIdMatch[1] : null;
+  const unread = useGlobalUnread();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -49,7 +51,14 @@ export default function AppLayout({ children }: Props) {
                 isActive(tab.path) ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {tab.label}
+              <span className="relative inline-flex items-center gap-1.5">
+                {tab.label}
+                {tab.path === '/mensajes' && unread > 0 && (
+                  <span className="min-w-[16px] h-[16px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center">
+                    {unread > 9 ? '9+' : unread}
+                  </span>
+                )}
+              </span>
             </button>
           ))}
         </nav>
@@ -93,7 +102,14 @@ export default function AppLayout({ children }: Props) {
                 isActive(tab.path) ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
-              <Icon className="w-5 h-5" />
+              <span className="relative">
+                <Icon className="w-5 h-5" />
+                {tab.path === '/mensajes' && unread > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold flex items-center justify-center">
+                    {unread > 9 ? '9+' : unread}
+                  </span>
+                )}
+              </span>
               <span className="text-[10px]">{tab.label}</span>
             </button>
           );
