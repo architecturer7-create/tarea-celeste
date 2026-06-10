@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Users } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Users, Download, FileText, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/UserAvatar';
 import type { Perfil } from '@/lib/types';
 import { toast } from 'sonner';
+import ChatAttachControls from '@/components/ChatAttachControls';
+import ScreenshotAnnotator from '@/components/ScreenshotAnnotator';
 
 interface Conv {
   id: string;
@@ -17,8 +19,12 @@ interface Msg {
   id: string;
   conversacion_id: string;
   autor_id: string;
-  contenido: string;
+  contenido: string | null;
   fecha: string;
+  archivo_path?: string | null;
+  archivo_nombre?: string | null;
+  archivo_tipo?: string | null;
+  archivo_tamano?: number | null;
 }
 
 function formatTime(fecha: string): string {
@@ -31,6 +37,13 @@ function formatDay(fecha: string): string {
   return d.toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+function formatSize(bytes: number | null | undefined): string {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
 export default function ConversationPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -41,6 +54,9 @@ export default function ConversationPage() {
   const [loading, setLoading] = useState(true);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [annotateFile, setAnnotateFile] = useState<File | null>(null);
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
@@ -86,6 +102,26 @@ export default function ConversationPage() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [msgs.length]);
 
+  // Signed URLs for image previews
+  useEffect(() => {
+    const imgs = msgs.filter(m => m.archivo_path && m.archivo_tipo?.startsWith('image/'));
+    imgs.forEach(async (m) => {
+      if (imageUrls[m.id] || !m.archivo_path) return;
+      const { data } = await supabase.storage.from('conversacion-archivos').createSignedUrl(m.archivo_path, 3600);
+      if (data?.signedUrl) setImageUrls(prev => ({ ...prev, [m.id]: data.signedUrl }));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msgs]);
+
+  const handleDownload = async (m: Msg) => {
+    if (!m.archivo_path) return;
+    const { data, error } = await supabase.storage
+      .from('conversacion-archivos')
+      .createSignedUrl(m.archivo_path, 60, { download: m.archivo_nombre ?? undefined });
+    if (error || !data) { toast.error('No se pudo descargar el archivo'); return; }
+    window.open(data.signedUrl, '_blank');
+  };
+
   const getPerfil = (uid: string) => miembros.find(p => p.user_id === uid);
   const otroDirecto = conv?.tipo === 'directo' ? miembros.find(p => p.user_id !== user?.id) : null;
   const titulo = conv?.tipo === 'grupo' ? (conv?.nombre ?? 'Grupo') : (otroDirecto?.nombre ?? 'Chat');
@@ -93,14 +129,36 @@ export default function ConversationPage() {
 
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !id || !texto.trim()) return;
+    if (!user || !id) return;
+    if (!texto.trim() && !archivo) return;
     setEnviando(true);
-    const { error } = await supabase.from('mensajes_conversacion' as never).insert({
-      conversacion_id: id, autor_id: user.id, contenido: texto.trim(),
-    } as never);
-    if (error) toast.error('No se pudo enviar');
-    else setTexto('');
-    setEnviando(false);
+    try {
+      let archivoMeta: Record<string, unknown> = {};
+      if (archivo) {
+        const ext = archivo.name.split('.').pop() ?? 'bin';
+        const path = `${id}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('conversacion-archivos')
+          .upload(path, archivo, { contentType: archivo.type || 'application/octet-stream', upsert: false });
+        if (upErr) { toast.error('No se pudo subir el archivo'); return; }
+        archivoMeta = {
+          archivo_path: path,
+          archivo_nombre: archivo.name,
+          archivo_tipo: archivo.type || 'application/octet-stream',
+          archivo_tamano: archivo.size,
+        };
+      }
+      const { error } = await supabase.from('mensajes_conversacion' as never).insert({
+        conversacion_id: id,
+        autor_id: user.id,
+        contenido: texto.trim() || null,
+        ...archivoMeta,
+      } as never);
+      if (error) toast.error('No se pudo enviar');
+      else { setTexto(''); setArchivo(null); }
+    } finally {
+      setEnviando(false);
+    }
   };
 
   if (loading) {
@@ -165,6 +223,24 @@ export default function ConversationPage() {
                       ? 'bg-[linear-gradient(135deg,hsl(var(--primary))_0%,hsl(var(--primary))_30%,hsl(0_0%_0%)_100%)] text-primary-foreground border-transparent shadow-[0_0_10px_-4px_hsl(var(--primary)/0.5)]'
                       : 'bg-muted text-foreground border-border'
                   }`}>
+                    {m.archivo_path && m.archivo_tipo?.startsWith('image/') && imageUrls[m.id] && (
+                      <button type="button" onClick={() => handleDownload(m)} className="block mb-1.5">
+                        <img src={imageUrls[m.id]} alt={m.archivo_nombre ?? 'imagen'} className="rounded-lg max-h-64 object-cover" />
+                      </button>
+                    )}
+                    {m.archivo_path && !m.archivo_tipo?.startsWith('image/') && (
+                      <button type="button" onClick={() => handleDownload(m)}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg mb-1 transition-colors w-full text-left ${
+                          isMine ? 'bg-black/30 hover:bg-black/40' : 'bg-background hover:bg-background/70'
+                        }`}>
+                        <FileText className="w-4 h-4 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium truncate">{m.archivo_nombre}</div>
+                          <div className="text-[10px] opacity-70">{formatSize(m.archivo_tamano)}</div>
+                        </div>
+                        <Download className="w-3.5 h-3.5 shrink-0" />
+                      </button>
+                    )}
                     {m.contenido}
                   </div>
                 </div>
@@ -174,8 +250,24 @@ export default function ConversationPage() {
         })}
       </div>
 
-      <form onSubmit={enviar} className="border-t border-border p-2 md:p-3 bg-background/60 backdrop-blur-sm flex items-end gap-2">
-        <textarea
+      <form onSubmit={enviar} className="border-t border-border p-2 md:p-3 bg-background/60 backdrop-blur-sm">
+        {archivo && (
+          <div className="flex items-center gap-2 mb-2 px-2 py-1.5 rounded-md bg-muted border border-border text-xs">
+            <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="flex-1 truncate text-foreground">{archivo.name}</span>
+            <span className="text-muted-foreground">{formatSize(archivo.size)}</span>
+            <button type="button" onClick={() => setArchivo(null)} className="text-muted-foreground hover:text-foreground">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+        <div className="flex items-end gap-2">
+          <ChatAttachControls
+            onFile={(f) => setArchivo(f)}
+            onAnnotate={(f) => setAnnotateFile(f)}
+            disabled={enviando}
+          />
+          <textarea
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar(e as unknown as React.FormEvent); } }}
@@ -183,15 +275,24 @@ export default function ConversationPage() {
           rows={1}
           className="flex-1 resize-none rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary max-h-32"
         />
-        <button
+          <button
           type="submit"
-          disabled={enviando || !texto.trim()}
+          disabled={enviando || (!texto.trim() && !archivo)}
           className="h-10 w-10 shrink-0 flex items-center justify-center rounded-md bg-primary text-primary-foreground disabled:opacity-50 hover:opacity-90"
           aria-label="Enviar"
         >
           {enviando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        </button>
+          </button>
+        </div>
       </form>
+
+      {annotateFile && (
+        <ScreenshotAnnotator
+          imageFile={annotateFile}
+          onCancel={() => setAnnotateFile(null)}
+          onConfirm={(f) => { setArchivo(f); setAnnotateFile(null); }}
+        />
+      )}
     </div>
   );
 }

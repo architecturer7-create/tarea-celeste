@@ -1,0 +1,183 @@
+import { useEffect, useRef, useState } from 'react';
+import { X, Pencil, Square, Circle as CircleIcon, ArrowUpRight, Undo2, Trash2, Check, Loader2 } from 'lucide-react';
+
+type Tool = 'pen' | 'rect' | 'circle' | 'arrow';
+
+interface Stroke {
+  tool: Tool;
+  color: string;
+  width: number;
+  points: { x: number; y: number }[];
+}
+
+interface Props {
+  imageFile: File;
+  onCancel: () => void;
+  onConfirm: (file: File) => void | Promise<void>;
+}
+
+const COLORS = ['#FF3B30', '#FFCC00', '#34C759', '#0A84FF', '#FFFFFF', '#000000'];
+
+export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: Props) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [current, setCurrent] = useState<Stroke | null>(null);
+  const [tool, setTool] = useState<Tool>('pen');
+  const [color, setColor] = useState(COLORS[0]);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(imageFile);
+    const img = new Image();
+    img.onload = () => {
+      imgRef.current = img;
+      setSize({ w: img.naturalWidth, h: img.naturalHeight });
+    };
+    img.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [imageFile]);
+
+  useEffect(() => {
+    const c = canvasRef.current; const img = imgRef.current;
+    if (!c || !img || !size.w) return;
+    c.width = size.w; c.height = size.h;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(img, 0, 0);
+    const all = current ? [...strokes, current] : strokes;
+    for (const s of all) drawStroke(ctx, s);
+  }, [strokes, current, size]);
+
+  function drawStroke(ctx: CanvasRenderingContext2D, s: Stroke) {
+    ctx.strokeStyle = s.color;
+    ctx.fillStyle = s.color;
+    ctx.lineWidth = s.width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const pts = s.points;
+    if (pts.length < 1) return;
+    if (s.tool === 'pen') {
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+    } else if (s.tool === 'rect' && pts.length >= 2) {
+      const a = pts[0], b = pts[pts.length - 1];
+      ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+    } else if (s.tool === 'circle' && pts.length >= 2) {
+      const a = pts[0], b = pts[pts.length - 1];
+      const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+      const rx = Math.abs(b.x - a.x) / 2, ry = Math.abs(b.y - a.y) / 2;
+      ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+    } else if (s.tool === 'arrow' && pts.length >= 2) {
+      const a = pts[0], b = pts[pts.length - 1];
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      const ang = Math.atan2(b.y - a.y, b.x - a.x);
+      const head = Math.max(12, s.width * 4);
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(b.x - head * Math.cos(ang - Math.PI / 6), b.y - head * Math.sin(ang - Math.PI / 6));
+      ctx.lineTo(b.x - head * Math.cos(ang + Math.PI / 6), b.y - head * Math.sin(ang + Math.PI / 6));
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  function getPos(e: React.PointerEvent): { x: number; y: number } {
+    const c = canvasRef.current!;
+    const rect = c.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * c.width,
+      y: ((e.clientY - rect.top) / rect.height) * c.height,
+    };
+  }
+
+  const onDown = (e: React.PointerEvent) => {
+    (e.target as Element).setPointerCapture(e.pointerId);
+    const p = getPos(e);
+    setCurrent({ tool, color, width: Math.max(3, Math.round(size.w / 400)), points: [p] });
+  };
+  const onMove = (e: React.PointerEvent) => {
+    if (!current) return;
+    const p = getPos(e);
+    if (tool === 'pen') setCurrent({ ...current, points: [...current.points, p] });
+    else setCurrent({ ...current, points: [current.points[0], p] });
+  };
+  const onUp = () => {
+    if (current) { setStrokes(prev => [...prev, current]); setCurrent(null); }
+  };
+
+  const undo = () => setStrokes(prev => prev.slice(0, -1));
+  const clear = () => setStrokes([]);
+
+  const confirm = async () => {
+    const c = canvasRef.current; if (!c) return;
+    setSaving(true);
+    try {
+      const blob: Blob = await new Promise((res, rej) =>
+        c.toBlob(b => (b ? res(b) : rej(new Error('blob'))), 'image/png', 0.92)!,
+      );
+      const baseName = imageFile.name.replace(/\.[^.]+$/, '') || 'captura';
+      const file = new File([blob], `${baseName}-anotada.png`, { type: 'image/png' });
+      await onConfirm(file);
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/90 flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-white/10">
+        <button onClick={onCancel} className="p-2 text-white/80 hover:text-white" aria-label="Cancelar"><X className="w-5 h-5" /></button>
+        <div className="text-sm text-white/80">Anotar imagen</div>
+        <button onClick={confirm} disabled={saving} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-sm disabled:opacity-50">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Enviar
+        </button>
+      </div>
+      <div className="flex-1 min-h-0 flex items-center justify-center overflow-auto p-2">
+        {size.w > 0 ? (
+          <canvas
+            ref={canvasRef}
+            onPointerDown={onDown}
+            onPointerMove={onMove}
+            onPointerUp={onUp}
+            onPointerCancel={onUp}
+            className="max-w-full max-h-full touch-none bg-white shadow-2xl"
+            style={{ aspectRatio: `${size.w} / ${size.h}` }}
+          />
+        ) : (
+          <Loader2 className="w-6 h-6 text-white/60 animate-spin" />
+        )}
+      </div>
+      <div className="border-t border-white/10 p-2 flex items-center justify-center gap-2 flex-wrap">
+        <div className="flex gap-1">
+          <ToolBtn active={tool==='pen'} onClick={() => setTool('pen')} title="Lápiz"><Pencil className="w-4 h-4" /></ToolBtn>
+          <ToolBtn active={tool==='rect'} onClick={() => setTool('rect')} title="Rectángulo"><Square className="w-4 h-4" /></ToolBtn>
+          <ToolBtn active={tool==='circle'} onClick={() => setTool('circle')} title="Círculo"><CircleIcon className="w-4 h-4" /></ToolBtn>
+          <ToolBtn active={tool==='arrow'} onClick={() => setTool('arrow')} title="Flecha"><ArrowUpRight className="w-4 h-4" /></ToolBtn>
+        </div>
+        <div className="flex gap-1 px-2 border-l border-white/10">
+          {COLORS.map(c => (
+            <button key={c} onClick={() => setColor(c)} aria-label={c}
+              className={`w-6 h-6 rounded-full border ${color===c ? 'ring-2 ring-white' : 'border-white/20'}`}
+              style={{ background: c }} />
+          ))}
+        </div>
+        <div className="flex gap-1 pl-2 border-l border-white/10">
+          <ToolBtn onClick={undo} title="Deshacer"><Undo2 className="w-4 h-4" /></ToolBtn>
+          <ToolBtn onClick={clear} title="Limpiar"><Trash2 className="w-4 h-4" /></ToolBtn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ToolBtn({ active, onClick, title, children }: { active?: boolean; onClick: () => void; title: string; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} title={title}
+      className={`h-9 w-9 flex items-center justify-center rounded-md border transition-colors ${
+        active ? 'bg-primary text-primary-foreground border-primary' : 'bg-white/5 text-white/80 border-white/10 hover:bg-white/10'
+      }`}>
+      {children}
+    </button>
+  );
+}
