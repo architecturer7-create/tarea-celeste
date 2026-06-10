@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Paperclip, Monitor, Pencil } from 'lucide-react';
+import { Paperclip, Monitor, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -62,7 +62,7 @@ export default function ChatAttachControls({ onFile, onAnnotate, imageOnly, disa
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) onAnnotate(f); e.target.value = ''; }}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ''; }}
       />
       <button
         type="button"
@@ -78,7 +78,7 @@ export default function ChatAttachControls({ onFile, onAnnotate, imageOnly, disa
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div className="absolute bottom-full mb-2 left-0 z-40 min-w-[200px] rounded-md border border-border bg-popover shadow-lg overflow-hidden">
             <MenuItem icon={<Paperclip className="w-4 h-4" />} label={imageOnly ? 'Imagen' : 'Archivo'} onClick={() => { setOpen(false); fileRef.current?.click(); }} />
-            <MenuItem icon={<Pencil className="w-4 h-4" />} label="Imagen con anotaciones" onClick={() => { setOpen(false); imgRef.current?.click(); }} />
+            <MenuItem icon={<ImageIcon className="w-4 h-4" />} label="Imagen" onClick={() => { setOpen(false); imgRef.current?.click(); }} />
             <MenuItem icon={<Monitor className="w-4 h-4" />} label="Capturar pantalla" onClick={captureScreen} />
           </div>
         </>
