@@ -29,7 +29,6 @@ export default function ProjectDetailPage() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [miembros, setMiembros] = useState<MiembroProyecto[]>([]);
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
-  const view = 'list' as const;
   const [section, setSection] = useState<'tareas' | 'sheets' | 'timeline' | 'miro' | 'connect'>(() => {
     const t = searchParams.get('tab');
     if (t === 'connect' || t === 'sheets' || t === 'timeline' || t === 'miro' || t === 'tareas') return t;
