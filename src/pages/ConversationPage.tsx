@@ -77,7 +77,9 @@ export default function ConversationPage() {
     supabase.from('miembros_conversacion' as never)
       .update({ fecha_ultima_lectura: new Date().toISOString() } as never)
       .eq('conversacion_id', id).eq('usuario_id', user.id)
-      .then(() => {});
+      .then(() => {
+        window.dispatchEvent(new CustomEvent('chat-seen', { detail: { conversacionId: id } }));
+      });
   }, [id, user?.id, msgs.length]);
 
   useEffect(() => {
