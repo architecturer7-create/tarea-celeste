@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Paperclip, Send, Loader2, Download, Trash2, FileText, X, Bell, BellOff } from 'lucide-react';
+import { Send, Loader2, Download, Trash2, FileText, X, Bell, BellOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -7,6 +7,8 @@ import type { Perfil } from '@/lib/types';
 import { toast } from 'sonner';
 import { enablePush, disablePush, isSubscribed, getPushStatus, isPushSupported } from '@/lib/pushNotifications';
 import { markChatSeen } from '@/hooks/useUnreadChat';
+import ChatAttachControls from '@/components/ChatAttachControls';
+import ScreenshotAnnotator from '@/components/ScreenshotAnnotator';
 
 interface ChatMensaje {
   id: string;
@@ -60,6 +62,7 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [annotateFile, setAnnotateFile] = useState<File | null>(null);
   const mentionMapRef = useRef<Map<string, string>>(new Map()); // token -> user_id
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
@@ -423,23 +426,12 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
           </div>
         )}
         <div className="flex items-end gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) setArchivo(f);
-            }}
+          <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) setArchivo(f); }} />
+          <ChatAttachControls
+            onFile={(f) => setArchivo(f)}
+            onAnnotate={(f) => setAnnotateFile(f)}
+            disabled={enviando}
           />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="h-10 w-10 shrink-0 flex items-center justify-center rounded-md border border-border bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/70 transition-colors"
-            title="Adjuntar archivo"
-          >
-            <Paperclip className="w-4 h-4" />
-          </button>
           <div className="flex-1 relative">
             {mentionQuery !== null && mentionCandidates.length > 0 && (
               <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border rounded-md shadow-lg overflow-hidden z-10 max-h-56 overflow-y-auto">
@@ -490,6 +482,13 @@ export default function ConnectView({ proyectoId, perfiles }: Props) {
           </button>
         </div>
       </form>
+      {annotateFile && (
+        <ScreenshotAnnotator
+          imageFile={annotateFile}
+          onCancel={() => setAnnotateFile(null)}
+          onConfirm={(f) => { setArchivo(f); setAnnotateFile(null); }}
+        />
+      )}
     </div>
   );
 }
