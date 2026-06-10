@@ -366,7 +366,7 @@ export default function ProjectDetailPage() {
           />
         ) : section === 'connect' ? (
           <ConnectView proyectoId={id!} perfiles={memberProfiles} />
-        ) : view === 'list' ? (
+        ) : (
           <div className="h-full overflow-y-auto p-3 md:p-4">
             {activeTareas.length === 0 && completedTareas.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -479,13 +479,6 @@ export default function ProjectDetailPage() {
               </div>
             )}
           </div>
-        ) : (
-          <KanbanBoard
-            tareas={filteredTareas}
-            perfiles={perfiles}
-            onTaskClick={setSelectedTask}
-            onStatusChange={updateTaskStatus}
-          />
         )}
 
         {/* FAB */}
