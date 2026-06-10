@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Pencil, Square, Circle as CircleIcon, ArrowUpRight, Undo2, Trash2, Check, Loader2 } from 'lucide-react';
+import { X, Pencil, Square, Circle as CircleIcon, ArrowUpRight, Undo2, Trash2, Check, Loader2, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 
 type Tool = 'pen' | 'rect' | 'circle' | 'arrow';
 
@@ -27,6 +27,10 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
   const [color, setColor] = useState(COLORS[0]);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [saving, setSaving] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<{ active: boolean; startX: number; startY: number; origX: number; origY: number }>({ active: false, startX: 0, startY: 0, origX: 0, origY: 0 });
 
   useEffect(() => {
     const url = URL.createObjectURL(imageFile);
@@ -94,18 +98,54 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
   }
 
   const onDown = (e: React.PointerEvent) => {
+    if (e.button === 1 || e.button === 2 || (e.pointerType === 'touch' && e.isPrimary === false)) {
+      panRef.current = { active: true, startX: e.clientX, startY: e.clientY, origX: pan.x, origY: pan.y };
+      (e.target as Element).setPointerCapture(e.pointerId);
+      e.preventDefault();
+      return;
+    }
     (e.target as Element).setPointerCapture(e.pointerId);
     const p = getPos(e);
     setCurrent({ tool, color, width: Math.max(3, Math.round(size.w / 400)), points: [p] });
   };
   const onMove = (e: React.PointerEvent) => {
+    if (panRef.current.active) {
+      setPan({ x: panRef.current.origX + (e.clientX - panRef.current.startX), y: panRef.current.origY + (e.clientY - panRef.current.startY) });
+      return;
+    }
     if (!current) return;
     const p = getPos(e);
     if (tool === 'pen') setCurrent({ ...current, points: [...current.points, p] });
     else setCurrent({ ...current, points: [current.points[0], p] });
   };
   const onUp = () => {
+    if (panRef.current.active) { panRef.current.active = false; return; }
     if (current) { setStrokes(prev => [...prev, current]); setCurrent(null); }
+  };
+
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const container = containerRef.current; if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const cx = e.clientX - rect.left - rect.width / 2;
+    const cy = e.clientY - rect.top - rect.height / 2;
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const newZoom = Math.max(1, Math.min(8, zoom * factor));
+    const ratio = newZoom / zoom;
+    setPan(prev => ({ x: cx - (cx - prev.x) * ratio, y: cy - (cy - prev.y) * ratio }));
+    setZoom(newZoom);
+  };
+
+  const resetZoom = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
+  const zoomIn = () => {
+    const nz = Math.min(8, zoom * 1.25);
+    setPan(prev => ({ x: prev.x * (nz / zoom), y: prev.y * (nz / zoom) }));
+    setZoom(nz);
+  };
+  const zoomOut = () => {
+    const nz = Math.max(1, zoom / 1.25);
+    setPan(prev => ({ x: prev.x * (nz / zoom), y: prev.y * (nz / zoom) }));
+    setZoom(nz);
   };
 
   const undo = () => setStrokes(prev => prev.slice(0, -1));
@@ -133,7 +173,12 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Enviar
         </button>
       </div>
-      <div className="flex-1 min-h-0 flex items-center justify-center overflow-auto p-2">
+      <div
+        ref={containerRef}
+        className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-2 relative"
+        onWheel={onWheel}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         {size.w > 0 ? (
           <canvas
             ref={canvasRef}
@@ -142,10 +187,18 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
             onPointerUp={onUp}
             onPointerCancel={onUp}
             className="max-w-full max-h-full touch-none bg-white shadow-2xl"
-            style={{ aspectRatio: `${size.w} / ${size.h}` }}
+            style={{
+              aspectRatio: `${size.w} / ${size.h}`,
+              transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+              transformOrigin: 'center center',
+              cursor: zoom > 1 ? 'grab' : 'crosshair',
+            }}
           />
         ) : (
           <Loader2 className="w-6 h-6 text-white/60 animate-spin" />
+        )}
+        {zoom > 1 && (
+          <div className="absolute top-2 right-2 text-[10px] text-white/70 bg-black/40 px-2 py-1 rounded">{Math.round(zoom * 100)}%</div>
         )}
       </div>
       <div className="border-t border-white/10 p-2 flex items-center justify-center gap-2 flex-wrap">
@@ -161,6 +214,11 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
               className={`w-6 h-6 rounded-full border ${color===c ? 'ring-2 ring-white' : 'border-white/20'}`}
               style={{ background: c }} />
           ))}
+        </div>
+        <div className="flex gap-1 pl-2 border-l border-white/10">
+          <ToolBtn onClick={zoomOut} title="Alejar"><ZoomOut className="w-4 h-4" /></ToolBtn>
+          <ToolBtn onClick={zoomIn} title="Acercar"><ZoomIn className="w-4 h-4" /></ToolBtn>
+          <ToolBtn onClick={resetZoom} title="Ajustar"><Maximize2 className="w-4 h-4" /></ToolBtn>
         </div>
         <div className="flex gap-1 pl-2 border-l border-white/10">
           <ToolBtn onClick={undo} title="Deshacer"><Undo2 className="w-4 h-4" /></ToolBtn>
