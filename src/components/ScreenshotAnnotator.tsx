@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { X, Pencil, Square, Circle as CircleIcon, ArrowUpRight, Undo2, Trash2, Check, Loader2, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 
 type Tool = 'pen' | 'rect' | 'circle' | 'arrow';
@@ -29,6 +29,7 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
   const [saving, setSaving] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [displaySize, setDisplaySize] = useState({ w: 0, h: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ active: boolean; startX: number; startY: number; origX: number; origY: number }>({ active: false, startX: 0, startY: 0, origX: 0, origY: 0 });
   const zoomRef = useRef(zoom);
@@ -36,13 +37,35 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { panStateRef.current = pan; }, [pan]);
 
-  // Attach a non-passive wheel listener so preventDefault works and zoom is reliable.
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container || !size.w || !size.h) return;
+
+    const measure = () => {
+      const rect = container.getBoundingClientRect();
+      const maxW = Math.max(rect.width - 16, 0);
+      const maxH = Math.max(rect.height - 16, 0);
+      if (!maxW || !maxH) return;
+      const ratio = Math.min(maxW / size.w, maxH / size.h, 1);
+      setDisplaySize({
+        w: Math.round(size.w * ratio),
+        h: Math.round(size.h * ratio),
+      });
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [size.w, size.h]);
+
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const handler = (e: WheelEvent) => {
       e.preventDefault();
-      const rect = el.getBoundingClientRect();
+      e.stopPropagation();
+      const rect = canvas.getBoundingClientRect();
       const cx = e.clientX - rect.left - rect.width / 2;
       const cy = e.clientY - rect.top - rect.height / 2;
       const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
@@ -54,9 +77,9 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
       setPan({ x: cx - (cx - p.x) * ratio, y: cy - (cy - p.y) * ratio });
       setZoom(newZoom);
     };
-    el.addEventListener('wheel', handler, { passive: false });
-    return () => el.removeEventListener('wheel', handler);
-  }, []);
+    canvas.addEventListener('wheel', handler, { passive: false });
+    return () => canvas.removeEventListener('wheel', handler);
+  }, [displaySize.w, displaySize.h]);
 
   useEffect(() => {
     const url = URL.createObjectURL(imageFile);
@@ -188,7 +211,7 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
       </div>
       <div
         ref={containerRef}
-        className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-2 relative"
+        className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-2 relative overscroll-none"
         onContextMenu={(e) => e.preventDefault()}
       >
         {size.w > 0 ? (
@@ -198,8 +221,10 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
             onPointerMove={onMove}
             onPointerUp={onUp}
             onPointerCancel={onUp}
-            className="max-w-full max-h-full touch-none bg-white shadow-2xl"
+            className="touch-none bg-white shadow-2xl"
             style={{
+              width: displaySize.w || undefined,
+              height: displaySize.h || undefined,
               aspectRatio: `${size.w} / ${size.h}`,
               transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
               transformOrigin: 'center center',
