@@ -59,17 +59,13 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
     return () => observer.disconnect();
   }, [size.w, size.h]);
 
-  // Attach a non-passive wheel listener so preventDefault works and zoom is reliable.
   useEffect(() => {
-    const el = containerRef.current;
     const canvas = canvasRef.current;
-    if (!el || !canvas) return;
+    if (!canvas) return;
     const handler = (e: WheelEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
-      if (!inside) return;
-
       e.preventDefault();
+      e.stopPropagation();
+      const rect = canvas.getBoundingClientRect();
       const cx = e.clientX - rect.left - rect.width / 2;
       const cy = e.clientY - rect.top - rect.height / 2;
       const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
@@ -81,8 +77,8 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
       setPan({ x: cx - (cx - p.x) * ratio, y: cy - (cy - p.y) * ratio });
       setZoom(newZoom);
     };
-    el.addEventListener('wheel', handler, { passive: false });
-    return () => el.removeEventListener('wheel', handler);
+    canvas.addEventListener('wheel', handler, { passive: false });
+    return () => canvas.removeEventListener('wheel', handler);
   }, [displaySize.w, displaySize.h]);
 
   useEffect(() => {
@@ -215,7 +211,7 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
       </div>
       <div
         ref={containerRef}
-        className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-2 relative"
+        className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-2 relative overscroll-none"
         onContextMenu={(e) => e.preventDefault()}
       >
         {size.w > 0 ? (
