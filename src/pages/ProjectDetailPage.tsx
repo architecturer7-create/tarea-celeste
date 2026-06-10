@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, List, Columns, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks, CalendarRange, SquareDashedKanban, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Plus, UserPlus, X, Check, ChevronRight, FileText, ListChecks, CalendarRange, SquareDashedKanban, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Proyecto, Tarea, MiembroProyecto, Perfil, EstadoTarea } from '@/lib/types';
@@ -8,7 +8,6 @@ import { ESTADO_CONFIG, PRIORIDAD_CONFIG } from '@/lib/types';
 import { UserAvatar } from '@/components/UserAvatar';
 import { StatusDot } from '@/components/StatusDot';
 import TaskDetailDrawer from '@/components/TaskDetailDrawer';
-import KanbanBoard from '@/components/KanbanBoard';
 import CreateTaskModal from '@/components/CreateTaskModal';
 import SheetsView from '@/components/SheetsView';
 import TimelineView from '@/components/TimelineView';
@@ -30,7 +29,6 @@ export default function ProjectDetailPage() {
   const [tareas, setTareas] = useState<Tarea[]>([]);
   const [miembros, setMiembros] = useState<MiembroProyecto[]>([]);
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
-  const [view, setView] = useState<'list' | 'kanban'>('list');
   const [section, setSection] = useState<'tareas' | 'sheets' | 'timeline' | 'miro' | 'connect'>(() => {
     const t = searchParams.get('tab');
     if (t === 'connect' || t === 'sheets' || t === 'timeline' || t === 'miro' || t === 'tareas') return t;
@@ -235,22 +233,6 @@ export default function ProjectDetailPage() {
             <button onClick={() => setShowInvite(true)} className="text-muted-foreground hover:text-foreground transition-colors p-1.5" aria-label="Invitar miembros">
               <UserPlus className="w-4 h-4" />
             </button>
-            {section === 'tareas' && (
-            <div className="flex items-center border border-border rounded-md overflow-hidden ml-2">
-              <button
-                onClick={() => setView('list')}
-                className={`p-1.5 transition-colors ${view === 'list' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setView('kanban')}
-                className={`p-1.5 transition-colors ${view === 'kanban' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                <Columns className="w-4 h-4" />
-              </button>
-            </div>
-            )}
           </div>
         </div>
 
@@ -276,24 +258,6 @@ export default function ProjectDetailPage() {
             >
               <UserPlus className="w-4 h-4" />
             </button>
-            {section === 'tareas' && (
-              <div className="flex items-center border border-border rounded-md overflow-hidden">
-                <button
-                  onClick={() => setView('list')}
-                  className={`p-2 transition-colors ${view === 'list' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                  aria-label="Vista lista"
-                >
-                  <List className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setView('kanban')}
-                  className={`p-2 transition-colors ${view === 'kanban' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
-                  aria-label="Vista kanban"
-                >
-                  <Columns className="w-4 h-4" />
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -401,7 +365,7 @@ export default function ProjectDetailPage() {
           />
         ) : section === 'connect' ? (
           <ConnectView proyectoId={id!} perfiles={memberProfiles} />
-        ) : view === 'list' ? (
+        ) : (
           <div className="h-full overflow-y-auto p-3 md:p-4">
             {activeTareas.length === 0 && completedTareas.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -514,13 +478,6 @@ export default function ProjectDetailPage() {
               </div>
             )}
           </div>
-        ) : (
-          <KanbanBoard
-            tareas={filteredTareas}
-            perfiles={perfiles}
-            onTaskClick={setSelectedTask}
-            onStatusChange={updateTaskStatus}
-          />
         )}
 
         {/* FAB */}
