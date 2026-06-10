@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, Plus, Users, User as UserIcon, Folder, Loader2 } from 'lucide-react';
+import { Plus, Users, User as UserIcon, Folder, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -228,13 +228,6 @@ export default function MessagesPage() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <h1 className="text-lg font-semibold flex items-center gap-2">
-          <MessageCircle className="w-5 h-5 text-primary" />
-          Mensajes
-        </h1>
-      </div>
-
       <div className="flex-1 overflow-y-auto">
         {items.length === 0 && (
           <div className="text-center text-sm text-muted-foreground py-16 px-6">
