@@ -31,6 +31,32 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ active: boolean; startX: number; startY: number; origX: number; origY: number }>({ active: false, startX: 0, startY: 0, origX: 0, origY: 0 });
+  const zoomRef = useRef(zoom);
+  const panStateRef = useRef(pan);
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { panStateRef.current = pan; }, [pan]);
+
+  // Attach a non-passive wheel listener so preventDefault works and zoom is reliable.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const cx = e.clientX - rect.left - rect.width / 2;
+      const cy = e.clientY - rect.top - rect.height / 2;
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      const z = zoomRef.current;
+      const newZoom = Math.max(1, Math.min(8, z * factor));
+      if (newZoom === z) return;
+      const ratio = newZoom / z;
+      const p = panStateRef.current;
+      setPan({ x: cx - (cx - p.x) * ratio, y: cy - (cy - p.y) * ratio });
+      setZoom(newZoom);
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
 
   useEffect(() => {
     const url = URL.createObjectURL(imageFile);
@@ -123,19 +149,6 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
     if (current) { setStrokes(prev => [...prev, current]); setCurrent(null); }
   };
 
-  const onWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const container = containerRef.current; if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const cx = e.clientX - rect.left - rect.width / 2;
-    const cy = e.clientY - rect.top - rect.height / 2;
-    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-    const newZoom = Math.max(1, Math.min(8, zoom * factor));
-    const ratio = newZoom / zoom;
-    setPan(prev => ({ x: cx - (cx - prev.x) * ratio, y: cy - (cy - prev.y) * ratio }));
-    setZoom(newZoom);
-  };
-
   const resetZoom = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
   const zoomIn = () => {
     const nz = Math.min(8, zoom * 1.25);
@@ -176,7 +189,6 @@ export default function ScreenshotAnnotator({ imageFile, onCancel, onConfirm }: 
       <div
         ref={containerRef}
         className="flex-1 min-h-0 flex items-center justify-center overflow-hidden p-2 relative"
-        onWheel={onWheel}
         onContextMenu={(e) => e.preventDefault()}
       >
         {size.w > 0 ? (
