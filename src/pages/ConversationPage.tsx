@@ -53,25 +53,12 @@ function extractUrls(text: string | null | undefined): string[] {
 }
 
 function renderTextWithLinks(text: string, isMine: boolean): React.ReactNode {
-  const parts = text.split(URL_REGEX);
-  return parts.map((part, i) => {
-    if (part && URL_REGEX.test(part)) {
-      URL_REGEX.lastIndex = 0;
-      return (
-        <a
-          key={i}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className={`underline underline-offset-2 break-all ${isMine ? 'text-primary-foreground/90 hover:text-primary-foreground' : 'text-primary hover:text-primary/80'}`}
-        >
-          {part}
-        </a>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
+  // Strip URLs from text (they become preview cards). If only URLs, render nothing.
+  const stripped = text.replace(URL_REGEX, '').replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  if (!stripped) return null;
+  // Render remaining text plain (no URLs left, but keep helper signature)
+  void isMine;
+  return <span>{stripped}</span>;
 }
 
 function LinkPreviewCard({ url, isMine }: { url: string; isMine: boolean }) {
@@ -121,6 +108,7 @@ export default function ConversationPage() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [annotateFile, setAnnotateFile] = useState<File | null>(null);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
@@ -289,9 +277,9 @@ export default function ConversationPage() {
                   }`}>
                     {m.archivo_path && m.archivo_tipo?.startsWith('image/') && imageUrls[m.id] && (
                       <div className="mb-1.5">
-                        <a href={imageUrls[m.id]} target="_blank" rel="noopener noreferrer" className="block">
-                          <img src={imageUrls[m.id]} alt={m.archivo_nombre ?? 'imagen'} className="rounded-lg max-h-64 w-auto object-contain" />
-                        </a>
+                        <button type="button" onClick={() => setLightboxUrl(imageUrls[m.id])} className="block">
+                          <img src={imageUrls[m.id]} alt={m.archivo_nombre ?? 'imagen'} className="rounded-lg max-h-64 w-auto object-contain cursor-zoom-in" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleDownload(m)}
@@ -371,6 +359,28 @@ export default function ConversationPage() {
           onCancel={() => setAnnotateFile(null)}
           onConfirm={(f) => { setArchivo(f); setAnnotateFile(null); }}
         />
+      )}
+
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setLightboxUrl(null); }}
+            className="absolute top-4 right-4 p-2 rounded-full bg-background/20 hover:bg-background/30 text-white"
+            aria-label="Cerrar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="Vista previa"
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-full max-h-full object-contain rounded-lg"
+          />
+        </div>
       )}
     </div>
   );
