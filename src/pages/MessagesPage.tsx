@@ -175,7 +175,9 @@ export default function MessagesPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'miembros_conversacion', filter: `usuario_id=eq.${user.id}` }, () => fetchAll())
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_mensajes' }, () => fetchAll())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const onSeen = () => fetchAll();
+    window.addEventListener('chat-seen', onSeen);
+    return () => { supabase.removeChannel(ch); window.removeEventListener('chat-seen', onSeen); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
