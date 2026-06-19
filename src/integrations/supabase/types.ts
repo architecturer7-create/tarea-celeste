@@ -436,6 +436,7 @@ export type Database = {
           fecha_inicio: string | null
           fecha_limite: string | null
           id: string
+          imagen_path: string | null
           prioridad: Database["public"]["Enums"]["prioridad_tarea"]
           proyecto_id: string
           responsable_id: string | null
@@ -451,6 +452,7 @@ export type Database = {
           fecha_inicio?: string | null
           fecha_limite?: string | null
           id?: string
+          imagen_path?: string | null
           prioridad?: Database["public"]["Enums"]["prioridad_tarea"]
           proyecto_id: string
           responsable_id?: string | null
@@ -466,6 +468,7 @@ export type Database = {
           fecha_inicio?: string | null
           fecha_limite?: string | null
           id?: string
+          imagen_path?: string | null
           prioridad?: Database["public"]["Enums"]["prioridad_tarea"]
           proyecto_id?: string
           responsable_id?: string | null
