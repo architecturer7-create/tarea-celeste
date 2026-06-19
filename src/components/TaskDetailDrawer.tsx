@@ -314,6 +314,14 @@ export default function TaskDetailDrawer({ tarea, perfiles, miembros, onClose, o
           </div>
         </div>
       </div>
+      {annotateFile && (
+        <ScreenshotAnnotator
+          imageFile={annotateFile}
+          onCancel={() => setAnnotateFile(null)}
+          onConfirm={(f) => { setPendingFile(f); setAnnotateFile(null); }}
+        />
+      )}
+      {lightbox && <ImageLightbox url={lightbox} onClose={() => setLightbox(null)} />}
     </>
   );
 }
