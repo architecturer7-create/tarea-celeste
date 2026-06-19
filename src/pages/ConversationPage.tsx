@@ -360,6 +360,28 @@ export default function ConversationPage() {
           onConfirm={(f) => { setArchivo(f); setAnnotateFile(null); }}
         />
       )}
+
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setLightboxUrl(null); }}
+            className="absolute top-4 right-4 p-2 rounded-full bg-background/20 hover:bg-background/30 text-white"
+            aria-label="Cerrar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="Vista previa"
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-full max-h-full object-contain rounded-lg"
+          />
+        </div>
+      )}
     </div>
   );
 }
