@@ -253,6 +253,8 @@ export default function ConversationPage() {
   }
 
   let lastDay = '';
+  const entrySince = entryLastReadRef.current ?? '1970-01-01T00:00:00Z';
+  const firstUnreadId = msgs.find(m => m.autor_id !== user?.id && new Date(m.fecha) > new Date(entrySince))?.id;
 
   return (
     <div className="flex flex-col h-full">
@@ -283,11 +285,19 @@ export default function ConversationPage() {
           const day = formatDay(m.fecha);
           const showDay = day !== lastDay;
           lastDay = day;
+          const isFirstUnread = m.id === firstUnreadId;
           return (
             <div key={m.id}>
               {showDay && (
                 <div className="flex items-center justify-center my-3">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{day}</span>
+                </div>
+              )}
+              {isFirstUnread && (
+                <div ref={firstUnreadRef} className="flex items-center gap-2 my-3">
+                  <div className="flex-1 h-px bg-primary/40" />
+                  <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">Nuevos mensajes</span>
+                  <div className="flex-1 h-px bg-primary/40" />
                 </div>
               )}
               <div className={`flex gap-2 w-full ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
