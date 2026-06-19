@@ -520,33 +520,7 @@ export type Database = {
       }
     }
     Views: {
-      perfiles_publicos: {
-        Row: {
-          avatar_url: string | null
-          color_avatar: string | null
-          created_at: string | null
-          id: string | null
-          nombre: string | null
-          user_id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          color_avatar?: string | null
-          created_at?: string | null
-          id?: string | null
-          nombre?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          color_avatar?: string | null
-          created_at?: string | null
-          id?: string | null
-          nombre?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       buscar_usuario_por_email: {
