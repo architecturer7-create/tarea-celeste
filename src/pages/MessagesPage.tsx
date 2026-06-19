@@ -30,6 +30,11 @@ interface UltimoMensaje {
   fecha: string;
 }
 
+interface UnreadAgg {
+  ultimo?: UltimoMensaje;
+  noLeidos: number;
+}
+
 type Item =
   | {
       kind: 'conv';
@@ -72,6 +77,7 @@ export default function MessagesPage() {
   const [convs, setConvs] = useState<Conversacion[]>([]);
   const [miembros, setMiembros] = useState<MiembroConv[]>([]);
   const [ultimos, setUltimos] = useState<Record<string, UltimoMensaje>>({});
+  const [convUnread, setConvUnread] = useState<Record<string, number>>({});
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [chatProyectos, setChatProyectos] = useState<Record<string, { contenido: string; fecha: string; autor_id: string; count: number }>>({});
@@ -112,13 +118,25 @@ export default function MessagesPage() {
         .order('fecha', { ascending: false })
         .limit(500);
       const ultimosMap: Record<string, UltimoMensaje> = {};
+      const unreadMap: Record<string, number> = {};
+      const membersArr = (allMembers as MiembroConv[] | null) ?? [];
+      const sinceByConv: Record<string, string> = {};
+      membersArr.forEach((m) => {
+        if (m.usuario_id === user.id) sinceByConv[m.conversacion_id] = m.fecha_ultima_lectura ?? '1970-01-01';
+      });
       ((msgs as UltimoMensaje[] | null) ?? []).forEach((m) => {
         if (!ultimosMap[m.conversacion_id]) ultimosMap[m.conversacion_id] = m;
+        const since = sinceByConv[m.conversacion_id] ?? '1970-01-01';
+        if (m.autor_id !== user.id && new Date(m.fecha) > new Date(since)) {
+          unreadMap[m.conversacion_id] = (unreadMap[m.conversacion_id] ?? 0) + 1;
+        }
       });
       setUltimos(ultimosMap);
+      setConvUnread(unreadMap);
     } else {
       setConvs([]);
       setUltimos({});
+      setConvUnread({});
     }
 
     // Chat de proyectos: último mensaje + no leídos (por localStorage)
@@ -166,12 +184,9 @@ export default function MessagesPage() {
     const result: Item[] = [];
 
     convs.forEach((c) => {
-      const miMembership = miembros.find(m => m.conversacion_id === c.id && m.usuario_id === user.id);
       const ultima = ultimos[c.id];
       const fecha = ultima?.fecha ?? c.fecha_ultimo_mensaje;
-      const since = miMembership?.fecha_ultima_lectura ?? '1970-01-01';
-      const otrosMensajes = ultima && ultima.autor_id !== user.id && new Date(ultima.fecha) > new Date(since);
-      const noLeidos = otrosMensajes ? 1 : 0; // simplificado MVP
+      const noLeidos = convUnread[c.id] ?? 0;
 
       if (c.tipo === 'directo') {
         const otroMiembro = miembros.find(m => m.conversacion_id === c.id && m.usuario_id !== user.id);
@@ -217,6 +232,7 @@ export default function MessagesPage() {
 
     return result.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
   }, [convs, miembros, ultimos, perfiles, proyectos, chatProyectos, user]);
+  void convUnread;
 
   if (loading) {
     return (
