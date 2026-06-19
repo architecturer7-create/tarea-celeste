@@ -231,8 +231,7 @@ export default function MessagesPage() {
     });
 
     return result.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-  }, [convs, miembros, ultimos, perfiles, proyectos, chatProyectos, user]);
-  void convUnread;
+  }, [convs, miembros, ultimos, convUnread, perfiles, proyectos, chatProyectos, user]);
 
   if (loading) {
     return (
