@@ -70,7 +70,6 @@ export default function ImageLightbox({ url, onClose }: Props) {
       <div
         ref={containerRef}
         className="absolute inset-0 overflow-hidden flex items-center justify-center select-none"
-        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
