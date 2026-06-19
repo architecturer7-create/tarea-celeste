@@ -108,6 +108,7 @@ export default function ConversationPage() {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [annotateFile, setAnnotateFile] = useState<File | null>(null);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
@@ -276,9 +277,9 @@ export default function ConversationPage() {
                   }`}>
                     {m.archivo_path && m.archivo_tipo?.startsWith('image/') && imageUrls[m.id] && (
                       <div className="mb-1.5">
-                        <a href={imageUrls[m.id]} target="_blank" rel="noopener noreferrer" className="block">
-                          <img src={imageUrls[m.id]} alt={m.archivo_nombre ?? 'imagen'} className="rounded-lg max-h-64 w-auto object-contain" />
-                        </a>
+                        <button type="button" onClick={() => setLightboxUrl(imageUrls[m.id])} className="block">
+                          <img src={imageUrls[m.id]} alt={m.archivo_nombre ?? 'imagen'} className="rounded-lg max-h-64 w-auto object-contain cursor-zoom-in" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleDownload(m)}
