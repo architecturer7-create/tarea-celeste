@@ -111,16 +111,27 @@ export default function ConversationPage() {
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const firstUnreadRef = useRef<HTMLDivElement>(null);
+  // Snapshot de fecha_ultima_lectura al entrar (para mantener el divisor de "no leídos" hasta salir)
+  const entryLastReadRef = useRef<string | null>(null);
+  const didInitialScrollRef = useRef(false);
 
   const fetchData = async () => {
     if (!id) return;
-    const [{ data: convData }, { data: msgsData }, { data: memberRows }] = await Promise.all([
+    const [{ data: convData }, { data: msgsData }, { data: memberRows }, { data: myMember }] = await Promise.all([
       supabase.from('conversaciones' as never).select('*').eq('id', id).maybeSingle(),
       supabase.from('mensajes_conversacion' as never).select('*').eq('conversacion_id', id).order('fecha', { ascending: true }),
       supabase.from('miembros_conversacion' as never).select('usuario_id').eq('conversacion_id', id),
+      user
+        ? supabase.from('miembros_conversacion' as never).select('fecha_ultima_lectura').eq('conversacion_id', id).eq('usuario_id', user.id).maybeSingle()
+        : Promise.resolve({ data: null } as { data: null }),
     ]);
     setConv((convData as Conv | null) ?? null);
     setMsgs((msgsData as Msg[] | null) ?? []);
+    if (entryLastReadRef.current === null) {
+      const r = (myMember as { fecha_ultima_lectura: string } | null) ?? null;
+      entryLastReadRef.current = r?.fecha_ultima_lectura ?? '1970-01-01T00:00:00Z';
+    }
     const ids = ((memberRows as { usuario_id: string }[] | null) ?? []).map(r => r.usuario_id);
     if (ids.length) {
       const { data: perfilesData } = await supabase.from('perfiles').select('*').in('user_id', ids);
@@ -132,6 +143,8 @@ export default function ConversationPage() {
   useEffect(() => {
     fetchData();
     if (!id) return;
+    didInitialScrollRef.current = false;
+    entryLastReadRef.current = null;
     const ch = supabase
       .channel(`conv-${id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'mensajes_conversacion', filter: `conversacion_id=eq.${id}` }, () => fetchData())
@@ -140,20 +153,38 @@ export default function ConversationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Marcar como leído
+  // Marcar como leído al SALIR de la conversación (cambio de id o desmontaje)
   useEffect(() => {
     if (!id || !user) return;
-    supabase.from('miembros_conversacion' as never)
-      .update({ fecha_ultima_lectura: new Date().toISOString() } as never)
-      .eq('conversacion_id', id).eq('usuario_id', user.id)
-      .then(() => {
-        window.dispatchEvent(new CustomEvent('chat-seen', { detail: { conversacionId: id } }));
-      });
-  }, [id, user?.id, msgs.length]);
+    const convId = id;
+    const userId = user.id;
+    return () => {
+      supabase.from('miembros_conversacion' as never)
+        .update({ fecha_ultima_lectura: new Date().toISOString() } as never)
+        .eq('conversacion_id', convId).eq('usuario_id', userId)
+        .then(() => {
+          window.dispatchEvent(new CustomEvent('chat-seen', { detail: { conversacionId: convId } }));
+        });
+    };
+  }, [id, user?.id]);
 
+  // Scroll inteligente: al cargar, ir al primer no leído (o al final si no hay).
+  // Mensajes nuevos posteriores → ir al final.
   useEffect(() => {
+    if (loading || msgs.length === 0) return;
+    if (!didInitialScrollRef.current) {
+      didInitialScrollRef.current = true;
+      const since = entryLastReadRef.current ?? '1970-01-01T00:00:00Z';
+      const firstUnread = msgs.find(m => m.autor_id !== user?.id && new Date(m.fecha) > new Date(since));
+      if (firstUnread && firstUnreadRef.current) {
+        firstUnreadRef.current.scrollIntoView({ block: 'start' });
+        return;
+      }
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+      return;
+    }
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [msgs.length]);
+  }, [msgs.length, loading, user?.id]);
 
   // Signed URLs for image previews
   useEffect(() => {
@@ -222,6 +253,8 @@ export default function ConversationPage() {
   }
 
   let lastDay = '';
+  const entrySince = entryLastReadRef.current ?? '1970-01-01T00:00:00Z';
+  const firstUnreadId = msgs.find(m => m.autor_id !== user?.id && new Date(m.fecha) > new Date(entrySince))?.id;
 
   return (
     <div className="flex flex-col h-full">
@@ -252,11 +285,19 @@ export default function ConversationPage() {
           const day = formatDay(m.fecha);
           const showDay = day !== lastDay;
           lastDay = day;
+          const isFirstUnread = m.id === firstUnreadId;
           return (
             <div key={m.id}>
               {showDay && (
                 <div className="flex items-center justify-center my-3">
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{day}</span>
+                </div>
+              )}
+              {isFirstUnread && (
+                <div ref={firstUnreadRef} className="flex items-center gap-2 my-3">
+                  <div className="flex-1 h-px bg-primary/40" />
+                  <span className="text-[10px] uppercase tracking-wider text-primary font-semibold">Nuevos mensajes</span>
+                  <div className="flex-1 h-px bg-primary/40" />
                 </div>
               )}
               <div className={`flex gap-2 w-full ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
