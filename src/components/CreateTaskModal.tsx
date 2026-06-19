@@ -1,9 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Trash2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { MiembroProyecto, Perfil, EstadoTarea, PrioridadTarea } from '@/lib/types';
 import { ESTADO_CONFIG, PRIORIDAD_CONFIG } from '@/lib/types';
 import { StatusDot } from '@/components/StatusDot';
+import ChatAttachControls from '@/components/ChatAttachControls';
+import ScreenshotAnnotator from '@/components/ScreenshotAnnotator';
+import ImageLightbox from '@/components/ImageLightbox';
+import { toast } from 'sonner';
 
 interface Props {
   proyectoId: string;
@@ -25,27 +30,68 @@ export default function CreateTaskModal({ proyectoId, miembros, perfiles, onClos
   const [prioridad, setPrioridad] = useState<PrioridadTarea>('media');
   const [saving, setSaving] = useState(false);
 
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [annotateFile, setAnnotateFile] = useState<File | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
   const memberProfiles = miembros
     .map(m => perfiles.find(p => p.user_id === m.usuario_id))
     .filter(Boolean) as Perfil[];
+
+  useEffect(() => {
+    if (!pendingFile) { setPendingPreview(null); return; }
+    const url = URL.createObjectURL(pendingFile);
+    setPendingPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingFile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !titulo.trim()) return;
     setSaving(true);
 
-    await supabase.from('tareas').insert({
-      proyecto_id: proyectoId,
-      titulo: titulo.trim(),
-      descripcion: descripcion || null,
-      estado,
-      prioridad,
-      responsable_id: responsableId || null,
-      fecha_inicio: fechaInicio || null,
-      fecha_limite: fechaLimite || null,
-      seccion: seccion || 'General',
-      creado_por: user.id,
-    });
+    const { data: inserted, error: insertError } = await supabase
+      .from('tareas')
+      .insert({
+        proyecto_id: proyectoId,
+        titulo: titulo.trim(),
+        descripcion: descripcion || null,
+        estado,
+        prioridad,
+        responsable_id: responsableId || null,
+        fecha_inicio: fechaInicio || null,
+        fecha_limite: fechaLimite || null,
+        seccion: seccion || 'General',
+        creado_por: user.id,
+      })
+      .select('id')
+      .single();
+
+    if (insertError || !inserted) {
+      toast.error('Error al crear la tarea');
+      setSaving(false);
+      return;
+    }
+
+    const tareaId = inserted.id;
+
+    if (pendingFile) {
+      setUploading(true);
+      const ext = (pendingFile.name.split('.').pop() || 'png').toLowerCase();
+      const path = `${proyectoId}/${tareaId}/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('tarea-archivos').upload(path, pendingFile, {
+        contentType: pendingFile.type || 'image/png',
+        upsert: false,
+      });
+      setUploading(false);
+      if (upErr) {
+        toast.error('Tarea creada, pero no se pudo subir la imagen');
+      } else {
+        await supabase.from('tareas').update({ imagen_path: path }).eq('id', tareaId);
+      }
+    }
 
     setSaving(false);
     onCreated();
@@ -77,6 +123,49 @@ export default function CreateTaskModal({ proyectoId, miembros, perfiles, onClos
               placeholder="Opcional..."
             />
           </div>
+
+          {/* Imagen */}
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1.5">Imagen</label>
+            {pendingPreview ? (
+              <div className="relative rounded-md overflow-hidden border border-border bg-muted mb-2">
+                <button
+                  type="button"
+                  onClick={() => setLightbox(pendingPreview)}
+                  className="block w-full"
+                >
+                  <img
+                    src={pendingPreview}
+                    alt="Vista previa"
+                    className="w-full max-h-64 object-contain cursor-zoom-in"
+                  />
+                </button>
+                <div className="absolute top-2 right-2 flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPendingFile(null)}
+                    disabled={uploading}
+                    className="h-8 w-8 rounded-md bg-background/80 backdrop-blur border border-border text-destructive hover:bg-background flex items-center justify-center"
+                    title="Descartar imagen"
+                  >
+                    {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            <div className="flex items-center gap-2">
+              <ChatAttachControls
+                onFile={(f) => setPendingFile(f)}
+                onAnnotate={(f) => setAnnotateFile(f)}
+                imageOnly
+                disabled={uploading || saving}
+              />
+              <span className="text-[11px] text-muted-foreground">
+                Adjunta una imagen o captura tu pantalla
+              </span>
+            </div>
+          </div>
+
           <div>
             <label className="block text-xs text-muted-foreground mb-1.5">Estado</label>
             <div className="flex gap-1.5 flex-wrap">
@@ -156,6 +245,15 @@ export default function CreateTaskModal({ proyectoId, miembros, perfiles, onClos
           </div>
         </form>
       </div>
+
+      {annotateFile && (
+        <ScreenshotAnnotator
+          imageFile={annotateFile}
+          onCancel={() => setAnnotateFile(null)}
+          onConfirm={(f) => { setPendingFile(f); setAnnotateFile(null); }}
+        />
+      )}
+      {lightbox && <ImageLightbox url={lightbox} onClose={() => setLightbox(null)} />}
     </div>
   );
 }
