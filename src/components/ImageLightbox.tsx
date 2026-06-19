@@ -46,17 +46,22 @@ export default function ImageLightbox({ url, onClose }: Props) {
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (zoom <= 1) return;
+    hasDraggedRef.current = false;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     dragRef.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y };
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragRef.current) return;
+    hasDraggedRef.current = true;
     setPan({
       x: dragRef.current.panX + (e.clientX - dragRef.current.startX),
       y: dragRef.current.panY + (e.clientY - dragRef.current.startY),
     });
   };
-  const onPointerUp = () => { dragRef.current = null; };
+  const onPointerUp = (e: React.PointerEvent) => {
+    dragRef.current = null;
+    if (!hasDraggedRef.current && e.target === e.currentTarget) onClose();
+  };
 
   const reset = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
