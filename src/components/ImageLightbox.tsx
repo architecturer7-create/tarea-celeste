@@ -11,6 +11,7 @@ export default function ImageLightbox({ url, onClose }: Props) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
+  const hasDraggedRef = useRef(false);
 
   // Wheel zoom centered on cursor
   useEffect(() => {
@@ -45,17 +46,22 @@ export default function ImageLightbox({ url, onClose }: Props) {
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (zoom <= 1) return;
+    hasDraggedRef.current = false;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     dragRef.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y };
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragRef.current) return;
+    hasDraggedRef.current = true;
     setPan({
       x: dragRef.current.panX + (e.clientX - dragRef.current.startX),
       y: dragRef.current.panY + (e.clientY - dragRef.current.startY),
     });
   };
-  const onPointerUp = () => { dragRef.current = null; };
+  const onPointerUp = (e: React.PointerEvent) => {
+    dragRef.current = null;
+    if (!hasDraggedRef.current && e.target === e.currentTarget) onClose();
+  };
 
   const reset = () => { setZoom(1); setPan({ x: 0, y: 0 }); };
 
@@ -64,7 +70,6 @@ export default function ImageLightbox({ url, onClose }: Props) {
       <div
         ref={containerRef}
         className="absolute inset-0 overflow-hidden flex items-center justify-center select-none"
-        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
