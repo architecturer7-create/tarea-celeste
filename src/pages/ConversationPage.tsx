@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send, Users, Download, FileText, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Send, Users, Download, FileText, X, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { UserAvatar } from '@/components/UserAvatar';
@@ -42,6 +42,70 @@ function formatSize(bytes: number | null | undefined): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+const URL_REGEX = /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]}'"])/gi;
+
+function extractUrls(text: string | null | undefined): string[] {
+  if (!text) return [];
+  const matches = text.match(URL_REGEX) ?? [];
+  return Array.from(new Set(matches));
+}
+
+function renderTextWithLinks(text: string, isMine: boolean): React.ReactNode {
+  const parts = text.split(URL_REGEX);
+  return parts.map((part, i) => {
+    if (part && URL_REGEX.test(part)) {
+      URL_REGEX.lastIndex = 0;
+      return (
+        <a
+          key={i}
+          href={part}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={`underline underline-offset-2 break-all ${isMine ? 'text-primary-foreground/90 hover:text-primary-foreground' : 'text-primary hover:text-primary/80'}`}
+        >
+          {part}
+        </a>
+      );
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
+
+function LinkPreviewCard({ url, isMine }: { url: string; isMine: boolean }) {
+  let host = url;
+  let path = '';
+  try {
+    const u = new URL(url);
+    host = u.hostname.replace(/^www\./, '');
+    path = (u.pathname + u.search).replace(/\/$/, '');
+    if (path.length > 40) path = path.slice(0, 38) + '…';
+  } catch { /* noop */ }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className={`mt-1.5 flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors w-full text-left no-underline ${
+        isMine ? 'bg-black/30 hover:bg-black/40' : 'bg-background hover:bg-background/70 border border-border'
+      }`}
+    >
+      <img
+        src={`https://www.google.com/s2/favicons?domain=${host}&sz=32`}
+        alt=""
+        className="w-4 h-4 rounded-sm shrink-0"
+        loading="lazy"
+      />
+      <div className="flex-1 min-w-0">
+        <div className="text-xs font-medium truncate">{host}</div>
+        {path && <div className="text-[10px] opacity-70 truncate">{path}</div>}
+      </div>
+      <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-70" />
+    </a>
+  );
 }
 
 export default function ConversationPage() {
@@ -189,7 +253,7 @@ export default function ConversationPage() {
         </div>
       </header>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 md:px-4 py-3 space-y-2">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 md:px-4 py-3 space-y-2 w-full">
         {msgs.length === 0 && (
           <div className="text-center text-sm text-muted-foreground py-10">Aún no hay mensajes. Sé el primero en escribir.</div>
         )}
@@ -206,9 +270,9 @@ export default function ConversationPage() {
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded-full">{day}</span>
                 </div>
               )}
-              <div className={`flex gap-2 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
+              <div className={`flex gap-2 w-full ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>
                 {p && <UserAvatar nombre={p.nombre} color={p.color_avatar} avatarUrl={p.avatar_url} size="sm" />}
-                <div className={`max-w-[75%] md:max-w-[60%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+                <div className={`min-w-0 max-w-[85%] sm:max-w-[78%] md:max-w-[70%] lg:max-w-[60%] xl:max-w-[55%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
                   {conv.tipo === 'grupo' && (
                     <div className="flex items-center gap-2 mb-0.5 px-1">
                       <span className="text-[10px] text-muted-foreground">{p?.nombre ?? 'Usuario'}</span>
@@ -218,15 +282,27 @@ export default function ConversationPage() {
                   {conv.tipo === 'directo' && (
                     <span className="text-[10px] text-muted-foreground/70 mb-0.5 px-1">{formatTime(m.fecha)}</span>
                   )}
-                  <div className={`rounded-2xl px-3 py-2 text-sm border whitespace-pre-wrap break-words ${
+                  <div className={`rounded-2xl px-3 py-2 text-sm border whitespace-pre-wrap break-words w-full ${
                     isMine
                       ? 'bg-[linear-gradient(135deg,hsl(var(--primary))_0%,hsl(var(--primary))_30%,hsl(0_0%_0%)_100%)] text-primary-foreground border-transparent shadow-[0_0_10px_-4px_hsl(var(--primary)/0.5)]'
                       : 'bg-muted text-foreground border-border'
                   }`}>
                     {m.archivo_path && m.archivo_tipo?.startsWith('image/') && imageUrls[m.id] && (
-                      <button type="button" onClick={() => handleDownload(m)} className="block mb-1.5">
-                        <img src={imageUrls[m.id]} alt={m.archivo_nombre ?? 'imagen'} className="rounded-lg max-h-64 object-cover" />
-                      </button>
+                      <div className="mb-1.5">
+                        <a href={imageUrls[m.id]} target="_blank" rel="noopener noreferrer" className="block">
+                          <img src={imageUrls[m.id]} alt={m.archivo_nombre ?? 'imagen'} className="rounded-lg max-h-64 w-auto object-contain" />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleDownload(m)}
+                          className={`mt-1 flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] transition-colors ${
+                            isMine ? 'bg-black/30 hover:bg-black/40' : 'bg-background hover:bg-background/70 border border-border'
+                          }`}
+                        >
+                          <Download className="w-3 h-3" />
+                          Descargar
+                        </button>
+                      </div>
                     )}
                     {m.archivo_path && !m.archivo_tipo?.startsWith('image/') && (
                       <button type="button" onClick={() => handleDownload(m)}
@@ -241,7 +317,10 @@ export default function ConversationPage() {
                         <Download className="w-3.5 h-3.5 shrink-0" />
                       </button>
                     )}
-                    {m.contenido}
+                    {m.contenido && renderTextWithLinks(m.contenido, isMine)}
+                    {extractUrls(m.contenido).slice(0, 3).map((u) => (
+                      <LinkPreviewCard key={u} url={u} isMine={isMine} />
+                    ))}
                   </div>
                 </div>
               </div>
