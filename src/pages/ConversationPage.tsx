@@ -53,25 +53,12 @@ function extractUrls(text: string | null | undefined): string[] {
 }
 
 function renderTextWithLinks(text: string, isMine: boolean): React.ReactNode {
-  const parts = text.split(URL_REGEX);
-  return parts.map((part, i) => {
-    if (part && URL_REGEX.test(part)) {
-      URL_REGEX.lastIndex = 0;
-      return (
-        <a
-          key={i}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className={`underline underline-offset-2 break-all ${isMine ? 'text-primary-foreground/90 hover:text-primary-foreground' : 'text-primary hover:text-primary/80'}`}
-        >
-          {part}
-        </a>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
+  // Strip URLs from text (they become preview cards). If only URLs, render nothing.
+  const stripped = text.replace(URL_REGEX, '').replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  if (!stripped) return null;
+  // Render remaining text plain (no URLs left, but keep helper signature)
+  void isMine;
+  return <span>{stripped}</span>;
 }
 
 function LinkPreviewCard({ url, isMine }: { url: string; isMine: boolean }) {
