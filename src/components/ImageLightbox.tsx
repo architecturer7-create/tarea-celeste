@@ -11,6 +11,7 @@ export default function ImageLightbox({ url, onClose }: Props) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dragRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null);
+  const hasDraggedRef = useRef(false);
 
   // Wheel zoom centered on cursor
   useEffect(() => {
