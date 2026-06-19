@@ -254,7 +254,9 @@ export default function MessagesPage() {
             <li key={`${it.kind}-${it.id}`}>
               <button
                 onClick={() => navigate(it.navTo)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
+                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left ${
+                  it.noLeidos > 0 ? 'bg-primary/10 border-l-2 border-primary' : ''
+                }`}
               >
                 {it.kind === 'conv' && it.tipo === 'directo' && it.avatarPerfil && (
                   <UserAvatar nombre={it.avatarPerfil.nombre} color={it.avatarPerfil.color_avatar} avatarUrl={it.avatarPerfil.avatar_url} size="lg" />
@@ -271,11 +273,11 @@ export default function MessagesPage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-foreground truncate">{it.titulo}</span>
-                    <span className="text-[10px] text-muted-foreground shrink-0">{formatHora(it.fecha)}</span>
+                    <span className={`text-sm truncate ${it.noLeidos > 0 ? 'font-semibold text-foreground' : 'font-medium text-foreground'}`}>{it.titulo}</span>
+                    <span className={`text-[10px] shrink-0 ${it.noLeidos > 0 ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>{formatHora(it.fecha)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className="text-xs text-muted-foreground truncate">{it.subtitulo}</span>
+                    <span className={`text-xs truncate ${it.noLeidos > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>{it.subtitulo}</span>
                     {it.noLeidos > 0 && (
                       <span className="shrink-0 min-w-[18px] h-[18px] px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
                         {it.noLeidos > 99 ? '99+' : it.noLeidos}
