@@ -30,6 +30,11 @@ interface UltimoMensaje {
   fecha: string;
 }
 
+interface UnreadAgg {
+  ultimo?: UltimoMensaje;
+  noLeidos: number;
+}
+
 type Item =
   | {
       kind: 'conv';
@@ -72,6 +77,7 @@ export default function MessagesPage() {
   const [convs, setConvs] = useState<Conversacion[]>([]);
   const [miembros, setMiembros] = useState<MiembroConv[]>([]);
   const [ultimos, setUltimos] = useState<Record<string, UltimoMensaje>>({});
+  const [convUnread, setConvUnread] = useState<Record<string, number>>({});
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [proyectos, setProyectos] = useState<Proyecto[]>([]);
   const [chatProyectos, setChatProyectos] = useState<Record<string, { contenido: string; fecha: string; autor_id: string; count: number }>>({});
@@ -112,13 +118,25 @@ export default function MessagesPage() {
         .order('fecha', { ascending: false })
         .limit(500);
       const ultimosMap: Record<string, UltimoMensaje> = {};
+      const unreadMap: Record<string, number> = {};
+      const membersArr = (allMembers as MiembroConv[] | null) ?? [];
+      const sinceByConv: Record<string, string> = {};
+      membersArr.forEach((m) => {
+        if (m.usuario_id === user.id) sinceByConv[m.conversacion_id] = m.fecha_ultima_lectura ?? '1970-01-01';
+      });
       ((msgs as UltimoMensaje[] | null) ?? []).forEach((m) => {
         if (!ultimosMap[m.conversacion_id]) ultimosMap[m.conversacion_id] = m;
+        const since = sinceByConv[m.conversacion_id] ?? '1970-01-01';
+        if (m.autor_id !== user.id && new Date(m.fecha) > new Date(since)) {
+          unreadMap[m.conversacion_id] = (unreadMap[m.conversacion_id] ?? 0) + 1;
+        }
       });
       setUltimos(ultimosMap);
+      setConvUnread(unreadMap);
     } else {
       setConvs([]);
       setUltimos({});
+      setConvUnread({});
     }
 
     // Chat de proyectos: último mensaje + no leídos (por localStorage)
@@ -157,7 +175,9 @@ export default function MessagesPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'miembros_conversacion', filter: `usuario_id=eq.${user.id}` }, () => fetchAll())
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_mensajes' }, () => fetchAll())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const onSeen = () => fetchAll();
+    window.addEventListener('chat-seen', onSeen);
+    return () => { supabase.removeChannel(ch); window.removeEventListener('chat-seen', onSeen); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
@@ -166,12 +186,9 @@ export default function MessagesPage() {
     const result: Item[] = [];
 
     convs.forEach((c) => {
-      const miMembership = miembros.find(m => m.conversacion_id === c.id && m.usuario_id === user.id);
       const ultima = ultimos[c.id];
       const fecha = ultima?.fecha ?? c.fecha_ultimo_mensaje;
-      const since = miMembership?.fecha_ultima_lectura ?? '1970-01-01';
-      const otrosMensajes = ultima && ultima.autor_id !== user.id && new Date(ultima.fecha) > new Date(since);
-      const noLeidos = otrosMensajes ? 1 : 0; // simplificado MVP
+      const noLeidos = convUnread[c.id] ?? 0;
 
       if (c.tipo === 'directo') {
         const otroMiembro = miembros.find(m => m.conversacion_id === c.id && m.usuario_id !== user.id);
@@ -216,7 +233,7 @@ export default function MessagesPage() {
     });
 
     return result.sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
-  }, [convs, miembros, ultimos, perfiles, proyectos, chatProyectos, user]);
+  }, [convs, miembros, ultimos, convUnread, perfiles, proyectos, chatProyectos, user]);
 
   if (loading) {
     return (
@@ -239,7 +256,9 @@ export default function MessagesPage() {
             <li key={`${it.kind}-${it.id}`}>
               <button
                 onClick={() => navigate(it.navTo)}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
+                className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left ${
+                  it.noLeidos > 0 ? 'bg-primary/10 border-l-2 border-primary' : ''
+                }`}
               >
                 {it.kind === 'conv' && it.tipo === 'directo' && it.avatarPerfil && (
                   <UserAvatar nombre={it.avatarPerfil.nombre} color={it.avatarPerfil.color_avatar} avatarUrl={it.avatarPerfil.avatar_url} size="lg" />
@@ -256,11 +275,11 @@ export default function MessagesPage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium text-foreground truncate">{it.titulo}</span>
-                    <span className="text-[10px] text-muted-foreground shrink-0">{formatHora(it.fecha)}</span>
+                    <span className={`text-sm truncate ${it.noLeidos > 0 ? 'font-semibold text-foreground' : 'font-medium text-foreground'}`}>{it.titulo}</span>
+                    <span className={`text-[10px] shrink-0 ${it.noLeidos > 0 ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>{formatHora(it.fecha)}</span>
                   </div>
                   <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <span className="text-xs text-muted-foreground truncate">{it.subtitulo}</span>
+                    <span className={`text-xs truncate ${it.noLeidos > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>{it.subtitulo}</span>
                     {it.noLeidos > 0 && (
                       <span className="shrink-0 min-w-[18px] h-[18px] px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold flex items-center justify-center">
                         {it.noLeidos > 99 ? '99+' : it.noLeidos}
