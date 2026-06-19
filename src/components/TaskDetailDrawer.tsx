@@ -1,14 +1,22 @@
-import { useState } from 'react';
-import { X, Calendar } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, Trash2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Tarea, EstadoTarea, PrioridadTarea, MiembroProyecto, Perfil } from '@/lib/types';
 import { ESTADO_CONFIG, PRIORIDAD_CONFIG } from '@/lib/types';
 import { UserAvatar } from '@/components/UserAvatar';
 import { StatusDot } from '@/components/StatusDot';
+import ChatAttachControls from '@/components/ChatAttachControls';
+import ScreenshotAnnotator from '@/components/ScreenshotAnnotator';
+import ImageLightbox from '@/components/ImageLightbox';
+import { toast } from 'sonner';
+
+interface TareaConImagen extends Tarea {
+  imagen_path?: string | null;
+}
 
 interface Props {
-  tarea: Tarea;
+  tarea: TareaConImagen;
   perfiles: Perfil[];
   miembros: MiembroProyecto[];
   onClose: () => void;
@@ -26,22 +34,66 @@ export default function TaskDetailDrawer({ tarea, perfiles, miembros, onClose, o
   const [seccion, setSeccion] = useState(tarea.seccion || 'General');
   const [prioridad, setPrioridad] = useState<PrioridadTarea>(tarea.prioridad || 'media');
   const [saving, setSaving] = useState(false);
+  const [imagenPath, setImagenPath] = useState<string | null>(tarea.imagen_path ?? null);
+  const [imagenUrl, setImagenUrl] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [annotateFile, setAnnotateFile] = useState<File | null>(null);
+  const [lightbox, setLightbox] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const memberProfiles = miembros
     .map(m => perfiles.find(p => p.user_id === m.usuario_id))
     .filter(Boolean) as Perfil[];
 
-  const responsable = perfiles.find(p => p.user_id === tarea.responsable_id);
+  useEffect(() => {
+    let cancel = false;
+    if (!imagenPath) { setImagenUrl(null); return; }
+    supabase.storage.from('tarea-archivos').createSignedUrl(imagenPath, 3600).then(({ data }) => {
+      if (!cancel) setImagenUrl(data?.signedUrl ?? null);
+    });
+    return () => { cancel = true; };
+  }, [imagenPath]);
+
+  useEffect(() => {
+    if (!pendingFile) { setPendingPreview(null); return; }
+    const url = URL.createObjectURL(pendingFile);
+    setPendingPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingFile]);
 
   const save = async () => {
     setSaving(true);
+    let newImagenPath: string | null | undefined = undefined;
+
+    if (pendingFile) {
+      setUploading(true);
+      const ext = (pendingFile.name.split('.').pop() || 'png').toLowerCase();
+      const path = `${tarea.proyecto_id}/${tarea.id}/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('tarea-archivos').upload(path, pendingFile, {
+        contentType: pendingFile.type || 'image/png',
+        upsert: false,
+      });
+      setUploading(false);
+      if (upErr) {
+        toast.error('No se pudo subir la imagen');
+        setSaving(false);
+        return;
+      }
+      if (imagenPath) {
+        await supabase.storage.from('tarea-archivos').remove([imagenPath]);
+      }
+      newImagenPath = path;
+    }
+
     const oldEstado = tarea.estado;
     await supabase.from('tareas').update({
       titulo, descripcion: descripcion || null, estado, prioridad,
       responsable_id: responsableId || null,
       fecha_inicio: fechaInicio || null, fecha_limite: fechaLimite || null,
       seccion,
-    }).eq('id', tarea.id);
+      ...(newImagenPath !== undefined ? { imagen_path: newImagenPath } : {}),
+    } as never).eq('id', tarea.id);
 
     if (oldEstado !== estado && user) {
       await supabase.from('actividad_tareas').insert({
@@ -52,6 +104,18 @@ export default function TaskDetailDrawer({ tarea, perfiles, miembros, onClose, o
     setSaving(false);
     onUpdate();
     onClose();
+  };
+
+  const removeImagen = async () => {
+    if (!imagenPath) { setPendingFile(null); return; }
+    if (!confirm('¿Eliminar la imagen de esta tarea?')) return;
+    setUploading(true);
+    await supabase.storage.from('tarea-archivos').remove([imagenPath]);
+    await supabase.from('tareas').update({ imagen_path: null } as never).eq('id', tarea.id);
+    setImagenPath(null);
+    setImagenUrl(null);
+    setUploading(false);
+    onUpdate();
   };
 
   const deleteTarea = async () => {
@@ -92,6 +156,53 @@ export default function TaskDetailDrawer({ tarea, perfiles, miembros, onClose, o
               className="w-full px-3 py-2 rounded-md bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary resize-none"
               placeholder="Descripción opcional..."
             />
+          </div>
+
+          {/* Imagen / recorte de pantalla */}
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1.5">Imagen</label>
+            {(pendingPreview || imagenUrl) ? (
+              <div className="relative rounded-md overflow-hidden border border-border bg-muted">
+                <button
+                  type="button"
+                  onClick={() => setLightbox(pendingPreview || imagenUrl)}
+                  className="block w-full"
+                >
+                  <img
+                    src={pendingPreview || imagenUrl || ''}
+                    alt="Imagen de la tarea"
+                    className="w-full max-h-64 object-contain cursor-zoom-in"
+                  />
+                </button>
+                <div className="absolute top-2 right-2 flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => pendingFile ? setPendingFile(null) : removeImagen()}
+                    disabled={uploading}
+                    className="h-8 w-8 rounded-md bg-background/80 backdrop-blur border border-border text-destructive hover:bg-background flex items-center justify-center"
+                    title={pendingFile ? 'Descartar nueva imagen' : 'Eliminar imagen'}
+                  >
+                    {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                {pendingFile && (
+                  <div className="absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
+                    Nueva — se guardará al pulsar Guardar
+                  </div>
+                )}
+              </div>
+            ) : null}
+            <div className="mt-2 flex items-center gap-2">
+              <ChatAttachControls
+                onFile={(f) => setPendingFile(f)}
+                onAnnotate={(f) => setAnnotateFile(f)}
+                imageOnly
+                disabled={uploading || saving}
+              />
+              <span className="text-[11px] text-muted-foreground">
+                Adjunta una imagen o captura tu pantalla
+              </span>
+            </div>
           </div>
 
           {/* Status */}
@@ -203,6 +314,14 @@ export default function TaskDetailDrawer({ tarea, perfiles, miembros, onClose, o
           </div>
         </div>
       </div>
+      {annotateFile && (
+        <ScreenshotAnnotator
+          imageFile={annotateFile}
+          onCancel={() => setAnnotateFile(null)}
+          onConfirm={(f) => { setPendingFile(f); setAnnotateFile(null); }}
+        />
+      )}
+      {lightbox && <ImageLightbox url={lightbox} onClose={() => setLightbox(null)} />}
     </>
   );
 }
