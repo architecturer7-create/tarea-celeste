@@ -79,6 +79,26 @@ export default function ProjectsPage() {
     fetchData();
   };
 
+  const duplicateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dupTarget || !dupName.trim() || dupLoading) return;
+    setDupLoading(true);
+    const { data, error } = await supabase.rpc('duplicar_proyecto', {
+      _proyecto_id: dupTarget.id,
+      _nombre: dupName.trim(),
+      _incluir_tareas: dupOpts.tareas,
+      _incluir_planos: dupOpts.planos,
+      _incluir_timeline: dupOpts.timeline,
+      _incluir_miembros: dupOpts.miembros,
+    });
+    setDupLoading(false);
+    if (!error) {
+      setDupTarget(null);
+      await fetchData();
+      if (data) navigate(`/proyecto/${data}`);
+    }
+  };
+
   const getTaskCounts = (proyectoId: string) => {
     const projectTasks = tareas.filter(t => t.proyecto_id === proyectoId);
     return {
