@@ -22,6 +22,10 @@ export default function ProjectsPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [dupTarget, setDupTarget] = useState<Proyecto | null>(null);
+  const [dupName, setDupName] = useState('');
+  const [dupOpts, setDupOpts] = useState({ tareas: true, planos: true, timeline: true, miembros: true });
+  const [dupLoading, setDupLoading] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
