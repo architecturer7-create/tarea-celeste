@@ -274,6 +274,13 @@ export default function ProjectsPage() {
 
                 {/* Botones flotantes en esquina superior derecha */}
                 <button
+                  onClick={(e) => { e.stopPropagation(); setDupTarget(p); setDupName(`${p.nombre} (copia)`); setDupOpts({ tareas: true, planos: true, timeline: true, miembros: true }); }}
+                  className="absolute top-2 right-16 opacity-60 md:opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all p-1 z-10"
+                  title="Duplicar proyecto"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+                <button
                   onClick={(e) => { e.stopPropagation(); setEditName(p.nombre); setEditTarget(p.id); }}
                   className="absolute top-2 right-9 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all p-1 z-10"
                   title="Editar nombre"
