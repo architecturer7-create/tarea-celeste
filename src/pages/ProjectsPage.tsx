@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, FolderOpen, Trash2, Pencil } from 'lucide-react';
+import { Plus, FolderOpen, Trash2, Pencil, Copy } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { Proyecto, Tarea, MiembroProyecto, Perfil } from '@/lib/types';
@@ -22,6 +22,10 @@ export default function ProjectsPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+  const [dupTarget, setDupTarget] = useState<Proyecto | null>(null);
+  const [dupName, setDupName] = useState('');
+  const [dupOpts, setDupOpts] = useState({ tareas: true, planos: true, timeline: true, miembros: true });
+  const [dupLoading, setDupLoading] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -73,6 +77,26 @@ export default function ProjectsPage() {
     await supabase.from('proyectos').update({ nombre: editName.trim() }).eq('id', editTarget);
     setEditTarget(null);
     fetchData();
+  };
+
+  const duplicateProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dupTarget || !dupName.trim() || dupLoading) return;
+    setDupLoading(true);
+    const { data, error } = await supabase.rpc('duplicar_proyecto', {
+      _proyecto_id: dupTarget.id,
+      _nombre: dupName.trim(),
+      _incluir_tareas: dupOpts.tareas,
+      _incluir_planos: dupOpts.planos,
+      _incluir_timeline: dupOpts.timeline,
+      _incluir_miembros: dupOpts.miembros,
+    });
+    setDupLoading(false);
+    if (!error) {
+      setDupTarget(null);
+      await fetchData();
+      if (data) navigate(`/proyecto/${data}`);
+    }
   };
 
   const getTaskCounts = (proyectoId: string) => {
@@ -250,6 +274,13 @@ export default function ProjectsPage() {
 
                 {/* Botones flotantes en esquina superior derecha */}
                 <button
+                  onClick={(e) => { e.stopPropagation(); setDupTarget(p); setDupName(`${p.nombre} (copia)`); setDupOpts({ tareas: true, planos: true, timeline: true, miembros: true }); }}
+                  className="absolute top-2 right-16 opacity-60 md:opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all p-1 z-10"
+                  title="Duplicar proyecto"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+                <button
                   onClick={(e) => { e.stopPropagation(); setEditName(p.nombre); setEditTarget(p.id); }}
                   className="absolute top-2 right-9 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground transition-all p-1 z-10"
                   title="Editar nombre"
@@ -300,6 +331,54 @@ export default function ProjectsPage() {
               <div className="flex gap-2 justify-end">
                 <button type="button" onClick={() => setEditTarget(null)} className="h-9 px-4 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
                 <button type="submit" className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">Guardar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate modal */}
+      {dupTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="glass-panel rounded-lg p-6 w-full max-w-md animate-fade-in">
+            <h3 className="text-base font-medium text-foreground mb-1">Duplicar proyecto</h3>
+            <p className="text-xs text-muted-foreground mb-4">Usa «{dupTarget.nombre}» como plantilla para un proyecto nuevo.</p>
+            <form onSubmit={duplicateProject} className="space-y-4">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1.5">Nombre del nuevo proyecto</label>
+                <input
+                  type="text"
+                  value={dupName}
+                  onChange={(e) => setDupName(e.target.value)}
+                  required
+                  autoFocus
+                  className="w-full h-10 px-3 rounded-md bg-muted border border-border text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div className="space-y-2">
+                <span className="block text-xs text-muted-foreground">Qué copiar</span>
+                {([
+                  ['tareas', 'Tareas (se reinician a pendiente)'],
+                  ['planos', 'Sheets / planos (sin marcar entregados)'],
+                  ['timeline', 'Timeline'],
+                  ['miembros', 'Miembros del equipo'],
+                ] as const).map(([key, label]) => (
+                  <label key={key} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={dupOpts[key]}
+                      onChange={(e) => setDupOpts(o => ({ ...o, [key]: e.target.checked }))}
+                      className="w-4 h-4 rounded border-border accent-primary"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button type="button" onClick={() => setDupTarget(null)} className="h-9 px-4 rounded-md text-sm text-muted-foreground hover:text-foreground transition-colors">Cancelar</button>
+                <button type="submit" disabled={dupLoading} className="h-9 px-4 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
+                  {dupLoading ? 'Duplicando…' : 'Duplicar'}
+                </button>
               </div>
             </form>
           </div>

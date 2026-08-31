@@ -542,6 +542,17 @@ export type Database = {
         Args: { _color: string; _nombre: string }
         Returns: string
       }
+      duplicar_proyecto: {
+        Args: {
+          _incluir_miembros?: boolean
+          _incluir_planos?: boolean
+          _incluir_tareas?: boolean
+          _incluir_timeline?: boolean
+          _nombre: string
+          _proyecto_id: string
+        }
+        Returns: string
+      }
       es_miembro_conversacion: {
         Args: { _conv_id: string; _user_id: string }
         Returns: boolean
